@@ -60,6 +60,19 @@ namespace Runner.Classes
             "ProduzionePezziDaServer[8].NumeroPezzi",
         };
 
+        //Interi -- numero di pezzi da eseguire
+        public static List<string> NumeroPezziAttuale = new List<string>()
+        {
+            "ProduzionePezziDaServer[1].NumeroPezziAttuale",
+            "ProduzionePezziDaServer[2].NumeroPezziAttuale",
+            "ProduzionePezziDaServer[3].NumeroPezziAttuale",
+            "ProduzionePezziDaServer[4].NumeroPezziAttuale",
+            "ProduzionePezziDaServer[5].NumeroPezziAttuale",
+            "ProduzionePezziDaServer[6].NumeroPezziAttuale",
+            "ProduzionePezziDaServer[7].NumeroPezziAttuale",
+            "ProduzionePezziDaServer[8].NumeroPezziAttuale",
+        };
+
         #endregion
 
         #region Plc 2 Server
@@ -68,7 +81,7 @@ namespace Runner.Classes
         {
             public static string CodiceArticolo { get; } = "ProduzionePezziAServer.CodArticolo";
             public static string NumeroPezziProdotti { get; } = "ProduzionePezziAServer.NumeroPezzi";
-            public static string TempoCiclo { get; } = "ProduzionePezziAServer.CodArticolo";
+            public static string TempoCiclo { get; } = "ProduzionePezziAServer.TempoCiclo";
             public static string Lotto { get; } = "ProduzionePezziAServer.Lotto";
         }
         #endregion

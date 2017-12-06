@@ -12,10 +12,9 @@ namespace Runner
         {
             Classes.PLCWorker _plc = new Classes.PLCWorker();
             _plc.AsyncHeartBeat();
-            //_plc.Screeba();
-            _plc.ScreebaLoop();
+            _plc.AsyncScreebaLoop();
             _plc.AsyncCheckEndOfTheGame();
-
+            _plc.AsyncCheckForWaste();
             Console.Read();
         }
     }

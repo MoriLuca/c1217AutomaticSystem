@@ -68,7 +68,7 @@ namespace Runner.Classes
                     }
                 }
 
-                Thread.Sleep(2000);
+                Thread.Sleep(3500);
             }
 
         }
@@ -82,6 +82,7 @@ namespace Runner.Classes
 
         }
 
+        //Funzione da utilizzare solamente in caso di debug
         public void ScreebaRandom()
         {
             while (true)
@@ -93,32 +94,17 @@ namespace Runner.Classes
                     {
                         Random random = new Random();
                         _plc.Active = true;
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[0], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[1], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[2], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[3], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[4], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[5], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[6], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[7], (Int16)random.Next(0, 20000));
 
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[0], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[1], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[2], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[3], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[4], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[5], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[6], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[7], random.Next(0, 20000).ToString());
+                        for (int i = 0; i < 8; i++)
+                        {
 
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[0], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[1], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[2], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[3], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[4], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[5], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[6], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[7], random.Next(0, 20000).ToString());
+                            _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[i], (Int16)random.Next(0, 20000));
+                            _plc.WriteVariable(Classes.PlcVariableName.NumeroPezziAttuale[i], (Int16)random.Next(0, 20000));
+                            _plc.WriteVariable(Classes.PlcVariableName.Lotti[i], random.Next(0, 20000).ToString());
+                            _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[i], random.Next(0, 20000).ToString());
+
+
+                        }
 
                     }
                     catch (Exception ex)
@@ -138,43 +124,30 @@ namespace Runner.Classes
             }
         }
 
-        public void ScreebaR()
+        public void Screeba()
         {
             while (true)
             {
                 lock (_comunicationLock)
                 {
+                    List<Classes.production2plc> listaProduzione = Classes.Database.ReadRecepies();
+
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
-                        Random random = new Random();
                         _plc.Active = true;
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[0], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[1], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[2], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[3], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[4], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[5], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[6], (Int16)random.Next(0, 20000));
-                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[7], (Int16)random.Next(0, 20000));
 
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[0], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[1], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[2], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[3], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[4], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[5], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[6], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[7], random.Next(0, 20000).ToString());
+                        for (int i = 0; i < listaProduzione.Count; i++)
+                        {
+                            if (listaProduzione[i].Lotto != null)
+                            {
+                                _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[i], (Int16)listaProduzione[i].NumeroPezziTotali);
+                                _plc.WriteVariable(Classes.PlcVariableName.NumeroPezziAttuale[i], (Int16)listaProduzione[i].NumeroParziale);
+                                _plc.WriteVariable(Classes.PlcVariableName.Lotti[i], listaProduzione[i].Lotto);
+                                _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[i], listaProduzione[i].CodiceArticolo);
+                            }
 
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[0], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[1], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[2], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[3], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[4], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[5], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[6], random.Next(0, 20000).ToString());
-                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[7], random.Next(0, 20000).ToString());
+                        }
 
                     }
                     catch (Exception ex)
@@ -190,14 +163,14 @@ namespace Runner.Classes
 
                 }
 
-                Thread.Sleep(2000);
+                Thread.Sleep(5000);
             }
         }
 
-        public void ScreebaLoop()
+        public void AsyncScreebaLoop()
         {
 
-            Thread debugLoop = new Thread(ScreebaRandom);
+            Thread debugLoop = new Thread(Screeba);
             debugLoop.IsBackground = true;
             debugLoop.Start();
 
@@ -224,6 +197,12 @@ namespace Runner.Classes
                         if (wasTheGameEnded != null && wasTheGameEnded == true)
                         {
                             //salvataggio log nel database
+                            Classes.Database.WriteLog(new productionLog() { 
+                                CodiceArticolo = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.CodiceArticolo),
+                                Lotto = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Lotto),
+                                TempoCiclo = (int)(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.TempoCiclo)),
+                                Waste = false,
+                            });
                             _plc.WriteVariable(Classes.PlcVariableName.EndOfTheGame, false);
                         }
                     }
@@ -237,7 +216,7 @@ namespace Runner.Classes
                     }
                 }
 
-                Thread.Sleep(3000);
+                Thread.Sleep(2000);
             }
 
         }
@@ -249,6 +228,50 @@ namespace Runner.Classes
             asyncEndOfTheGame.IsBackground = true;
             asyncEndOfTheGame.Start();
 
+        }
+
+        public void CheckForWaste()
+        {
+            //Se viene rilevata la presenza di fine lavorazione, viene salvata
+            //nel database, altrimenti non verrà eseguita nessuna azione
+
+            bool? DoWeHaveAnyWaste = null;
+
+            while (true)
+            {
+
+                //comunicazione con plc e lettura variabile di scambio segnale
+                lock (_comunicationLock)
+                {
+                    try
+                    {
+                        _plc.Active = true;
+                        DoWeHaveAnyWaste = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWaste);
+                        if (DoWeHaveAnyWaste != null && DoWeHaveAnyWaste == true)
+                        {
+                            _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWaste, false);
+                            Database.SubRecepyNumber();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                    finally
+                    {
+                        _plc.Active = false;
+                    }
+                }
+
+                Thread.Sleep(2000);
+            }
+        }
+
+        public void AsyncCheckForWaste()
+        {
+            Thread wasteCollector = new Thread(CheckForWaste);
+            wasteCollector.IsBackground = true;
+            wasteCollector.Start();
         }
 
     }

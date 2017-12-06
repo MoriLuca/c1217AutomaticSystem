@@ -17,7 +17,7 @@ namespace Runner.Classes
         public int id { get; set; }
         public string Lotto { get; set; }
         public string CodiceArticolo { get; set; }
-        public Nullable<int> NumeroPezzi { get; set; }
         public Nullable<int> TempoCiclo { get; set; }
+        public Nullable<bool> Waste { get; set; }
     }
 }

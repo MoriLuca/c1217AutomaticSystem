@@ -4,7 +4,7 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-      <Schema Namespace="ProduzioneModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+    <Schema Namespace="ProduzioneModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <EntityType Name="production2plc">
           <Key>
             <PropertyRef Name="id" />
@@ -22,15 +22,14 @@
           <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="Lotto" Type="nvarchar" MaxLength="50" />
           <Property Name="CodiceArticolo" Type="nvarchar" MaxLength="50" />
-          <Property Name="NumeroPezzi" Type="int" />
           <Property Name="TempoCiclo" Type="int" />
+          <Property Name="Waste" Type="bit" />
         </EntityType>
         <EntityContainer Name="ProduzioneModelStoreContainer">
           <EntitySet Name="production2plc" EntityType="Self.production2plc" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="productionLog" EntityType="Self.productionLog" Schema="dbo" store:Type="Tables" />
         </EntityContainer>
-      </Schema>
-    </edmx:StorageModels>
+      </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="ProduzioneModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
@@ -51,8 +50,8 @@
           <Property Name="id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
           <Property Name="Lotto" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
           <Property Name="CodiceArticolo" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
-          <Property Name="NumeroPezzi" Type="Int32" />
           <Property Name="TempoCiclo" Type="Int32" />
+          <Property Name="Waste" Type="Boolean" />
         </EntityType>
         <EntityContainer Name="ProduzioneEntities" annotation:LazyLoadingEnabled="true">
           <EntitySet Name="production2plc" EntityType="Self.production2plc" />
@@ -78,10 +77,10 @@
           <EntitySetMapping Name="productionLogs">
             <EntityTypeMapping TypeName="ProduzioneModel.productionLog">
               <MappingFragment StoreEntitySet="productionLog">
+                <ScalarProperty Name="Waste" ColumnName="Waste" />
                 <ScalarProperty Name="id" ColumnName="id" />
                 <ScalarProperty Name="Lotto" ColumnName="Lotto" />
                 <ScalarProperty Name="CodiceArticolo" ColumnName="CodiceArticolo" />
-                <ScalarProperty Name="NumeroPezzi" ColumnName="NumeroPezzi" />
                 <ScalarProperty Name="TempoCiclo" ColumnName="TempoCiclo" />
               </MappingFragment>
             </EntityTypeMapping>
