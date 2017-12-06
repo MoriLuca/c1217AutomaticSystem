@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Runner
@@ -15,7 +16,10 @@ namespace Runner
             _plc.AsyncScreebaLoop();
             _plc.AsyncCheckEndOfTheGame();
             _plc.AsyncCheckForWaste();
-            Console.Read();
+            while (true)
+            {
+                Thread.Sleep(300);
+            }
         }
     }
 }
