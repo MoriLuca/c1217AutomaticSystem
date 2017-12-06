@@ -138,7 +138,63 @@ namespace Runner.Classes
             }
         }
 
-        public void ScreebaLoopDebug()
+        public void ScreebaR()
+        {
+            while (true)
+            {
+                lock (_comunicationLock)
+                {
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+                    try
+                    {
+                        Random random = new Random();
+                        _plc.Active = true;
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[0], (Int16)random.Next(0, 20000));
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[1], (Int16)random.Next(0, 20000));
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[2], (Int16)random.Next(0, 20000));
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[3], (Int16)random.Next(0, 20000));
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[4], (Int16)random.Next(0, 20000));
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[5], (Int16)random.Next(0, 20000));
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[6], (Int16)random.Next(0, 20000));
+                        _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[7], (Int16)random.Next(0, 20000));
+
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[0], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[1], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[2], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[3], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[4], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[5], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[6], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.Lotti[7], random.Next(0, 20000).ToString());
+
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[0], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[1], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[2], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[3], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[4], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[5], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[6], random.Next(0, 20000).ToString());
+                        _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[7], random.Next(0, 20000).ToString());
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                    finally
+                    {
+                        _plc.Active = false;
+                    }
+                    watch.Stop();
+                    Console.WriteLine(watch.ElapsedMilliseconds);
+
+                }
+
+                Thread.Sleep(2000);
+            }
+        }
+
+        public void ScreebaLoop()
         {
 
             Thread debugLoop = new Thread(ScreebaRandom);

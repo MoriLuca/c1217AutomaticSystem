@@ -13,7 +13,7 @@ namespace Runner
             Classes.PLCWorker _plc = new Classes.PLCWorker();
             _plc.AsyncHeartBeat();
             //_plc.Screeba();
-            _plc.ScreebaLoopDebug();
+            _plc.ScreebaLoop();
             _plc.AsyncCheckEndOfTheGame();
 
             Console.Read();
