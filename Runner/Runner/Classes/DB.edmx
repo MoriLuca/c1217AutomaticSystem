@@ -1,0 +1,112 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+      <Schema Namespace="ProduzioneModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="production2plc">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="CodiceArticolo" Type="nvarchar" MaxLength="50" />
+          <Property Name="Lotto" Type="nvarchar" MaxLength="50" />
+          <Property Name="NumeroPezziTotali" Type="int" />
+          <Property Name="NumeroParziale" Type="int" />
+        </EntityType>
+        <EntityType Name="productionLog">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Lotto" Type="nvarchar" MaxLength="50" />
+          <Property Name="CodiceArticolo" Type="nvarchar" MaxLength="50" />
+          <Property Name="NumeroPezzi" Type="int" />
+          <Property Name="TempoCiclo" Type="int" />
+        </EntityType>
+        <EntityContainer Name="ProduzioneModelStoreContainer">
+          <EntitySet Name="production2plc" EntityType="Self.production2plc" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="productionLog" EntityType="Self.productionLog" Schema="dbo" store:Type="Tables" />
+        </EntityContainer>
+      </Schema>
+    </edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="ProduzioneModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityType Name="production2plc">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="CodiceArticolo" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="Lotto" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="NumeroPezziTotali" Type="Int32" />
+          <Property Name="NumeroParziale" Type="Int32" />
+        </EntityType>
+        <EntityType Name="productionLog">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Lotto" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="CodiceArticolo" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="NumeroPezzi" Type="Int32" />
+          <Property Name="TempoCiclo" Type="Int32" />
+        </EntityType>
+        <EntityContainer Name="ProduzioneEntities" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="production2plc" EntityType="Self.production2plc" />
+          <EntitySet Name="productionLogs" EntityType="Self.productionLog" />
+        </EntityContainer>
+      </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="ProduzioneModelStoreContainer" CdmEntityContainer="ProduzioneEntities">
+          <EntitySetMapping Name="production2plc">
+            <EntityTypeMapping TypeName="ProduzioneModel.production2plc">
+              <MappingFragment StoreEntitySet="production2plc">
+                <ScalarProperty Name="id" ColumnName="id" />
+                <ScalarProperty Name="CodiceArticolo" ColumnName="CodiceArticolo" />
+                <ScalarProperty Name="Lotto" ColumnName="Lotto" />
+                <ScalarProperty Name="NumeroPezziTotali" ColumnName="NumeroPezziTotali" />
+                <ScalarProperty Name="NumeroParziale" ColumnName="NumeroParziale" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="productionLogs">
+            <EntityTypeMapping TypeName="ProduzioneModel.productionLog">
+              <MappingFragment StoreEntitySet="productionLog">
+                <ScalarProperty Name="id" ColumnName="id" />
+                <ScalarProperty Name="Lotto" ColumnName="Lotto" />
+                <ScalarProperty Name="CodiceArticolo" ColumnName="CodiceArticolo" />
+                <ScalarProperty Name="NumeroPezzi" ColumnName="NumeroPezzi" />
+                <ScalarProperty Name="TempoCiclo" ColumnName="TempoCiclo" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="true" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="None" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>
