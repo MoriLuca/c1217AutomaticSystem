@@ -11,7 +11,12 @@ namespace Runner
         static void Main(string[] args)
         {
             Classes.PLCWorker _plc = new Classes.PLCWorker();
-            _plc.HeartBeat();
+            _plc.AsyncHeartBeat();
+            //_plc.Screeba();
+            _plc.ScreebaLoopDebug();
+            _plc.AsyncCheckEndOfTheGame();
+
+            Console.Read();
         }
     }
 }
