@@ -1,7 +1,7 @@
-﻿#define NJ
-//#undef NJ
-//#define NX
-#undef NX
+﻿//#define NJ
+#undef NJ
+#define NX
+//#undef NX
 
 using System;
 using System.Collections.Generic;
@@ -30,7 +30,7 @@ namespace Runner.Classes
         public PLCWorker()
         {
             _comunicationLock = new object();
-            _plc.PeerAddress = "192.168.1.201";
+            _plc.PeerAddress = "192.168.10.201";
             _plc.LocalPort = 2;
         }
 
@@ -59,6 +59,7 @@ namespace Runner.Classes
                     }
                     catch (Exception ex)
                     {
+                        Console.Write("Heartbeat Error:");
                         Console.WriteLine(ex.Message);
                     }
                     finally
@@ -152,6 +153,7 @@ namespace Runner.Classes
                     }
                     catch (Exception ex)
                     {
+                        Console.Write("Screeba Error : ");
                         Console.WriteLine(ex.Message);
                     }
                     finally
@@ -208,6 +210,7 @@ namespace Runner.Classes
                     }
                     catch (Exception ex)
                     {
+                        Console.Write("End Of The Game Error :");
                         Console.WriteLine(ex.Message);
                     }
                     finally
@@ -255,6 +258,7 @@ namespace Runner.Classes
                     }
                     catch (Exception ex)
                     {
+                        Console.Write("Check for waste Error:");
                         Console.WriteLine(ex.Message);
                     }
                     finally
