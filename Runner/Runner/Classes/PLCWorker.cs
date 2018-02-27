@@ -30,7 +30,7 @@ namespace Runner.Classes
         public PLCWorker()
         {
             _comunicationLock = new object();
-            _plc.PeerAddress = "192.168.10.201";
+            _plc.PeerAddress = "10.0.50.121";
             _plc.LocalPort = 2;
         }
 
@@ -132,7 +132,6 @@ namespace Runner.Classes
                 lock (_comunicationLock)
                 {
                     List<Classes.production2plc> listaProduzione = Classes.Database.ReadRecepies();
-
                     var watch = System.Diagnostics.Stopwatch.StartNew();
                     try
                     {
@@ -180,7 +179,6 @@ namespace Runner.Classes
 
         public void CheckEndOfTheGame()
         {
-
             //Se viene rilevata la presenza di fine lavorazione, viene salvata
             //nel database, altrimenti non verrà eseguita nessuna azione
 
@@ -237,7 +235,6 @@ namespace Runner.Classes
         {
             //Se viene rilevata la presenza di fine lavorazione, viene salvata
             //nel database, altrimenti non verrà eseguita nessuna azione
-
             bool? DoWeHaveAnyWaste = null;
 
             while (true)

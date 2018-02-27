@@ -73,6 +73,7 @@ namespace Runner.Classes
                     
                     Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id).FirstOrDefault();
                     log.Waste = true;
+
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
                     if (ricetta.NumeroParziale > 0)
                     {
@@ -83,7 +84,7 @@ namespace Runner.Classes
             }
             catch (Exception ex)
             {
-                Console.WriteLine();
+                Console.WriteLine( "SubRecepyNumber" + ex.Message);
             }
         }
     }
