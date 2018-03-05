@@ -15,30 +15,33 @@ namespace Runner.Classes
 {
     public class PLCWorker
     {
-
+        #region proprietà
         private object _comunicationLock;
+
         //PLC utilizzato per l'applicazione
 
-#if (NX) 
+#if (NX)
         private NXCompolet _plc = new NXCompolet();
 #endif
 #if (NJ)
         private NJCompolet _plc = new NJCompolet();
 #endif
+        #endregion
 
-
+        #region costruttore
         public PLCWorker()
         {
             _comunicationLock = new object();
             _plc.PeerAddress = "10.0.50.121";
             _plc.LocalPort = 2;
         }
+        #endregion
 
+        #region metodi
+        ///<summary>Test Connessione con plc </summary>
         public void HeartBeat()
         {
-            //funzione per testare la comunicazione con il plc.
-            //questa variabile booleana che viene portata ad uno da questo porgramma, 
-            //verrà riportata a 0 dal plc come verifica di effettiva connessione
+
 
             bool? uselessBool = null;
 
@@ -52,34 +55,24 @@ namespace Runner.Classes
                     {
                         _plc.Active = true;
                         uselessBool = (bool)_plc.ReadVariable("HandShake");
-                        if (uselessBool != null && uselessBool == false)
+                        if (!uselessBool.Value)
                         {
                             _plc.WriteVariable("HandShake", true);
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.Write("Heartbeat Error:");
+                        Console.Write("Heartbeat Error: Eccezione in lettura PLC.");
                         Console.WriteLine(ex.Message);
                     }
                     finally
                     {
-
                         _plc.Active = false;
                     }
                 }
-
+                // tempo arbitrario per test di connessione
                 Thread.Sleep(3500);
             }
-
-        }
-
-        public void AsyncHeartBeat()
-        {
-
-            Thread asyncBeater = new Thread(HeartBeat);
-            asyncBeater.IsBackground = true;
-            asyncBeater.Start();
 
         }
 
@@ -125,14 +118,19 @@ namespace Runner.Classes
             }
         }
 
+        /// <summary>
+        /// La funzione screeba scrive le ricette lette dal database, sul PLC
+        /// </summary>
         public void Screeba()
         {
             while (true)
             {
                 lock (_comunicationLock)
                 {
+                    //lettura ricette da database
                     List<Classes.production2plc> listaProduzione = Classes.Database.ReadRecepies();
                     var watch = System.Diagnostics.Stopwatch.StartNew();
+
                     try
                     {
                         _plc.Active = true;
@@ -152,7 +150,7 @@ namespace Runner.Classes
                     }
                     catch (Exception ex)
                     {
-                        Console.Write("Screeba Error : ");
+                        Console.Write("Screeba Error [Srcittura ricette su PLC] : ");
                         Console.WriteLine(ex.Message);
                     }
                     finally
@@ -160,7 +158,7 @@ namespace Runner.Classes
                         _plc.Active = false;
                     }
                     watch.Stop();
-                    Console.WriteLine(watch.ElapsedMilliseconds);
+                    Console.WriteLine("Scrittura ricette aggiornate avvenuta in : "+watch.ElapsedMilliseconds+" ms");
 
                 }
 
@@ -168,21 +166,16 @@ namespace Runner.Classes
             }
         }
 
-        public void AsyncScreebaLoop()
-        {
-
-            Thread debugLoop = new Thread(Screeba);
-            debugLoop.IsBackground = true;
-            debugLoop.Start();
-
-        }
-
+        /// <summary>
+        /// Check fine pezzo per salvataggio db
+        /// </summary>
         public void CheckEndOfTheGame()
         {
             //Se viene rilevata la presenza di fine lavorazione, viene salvata
             //nel database, altrimenti non verrà eseguita nessuna azione
 
-            bool? wasTheGameEnded = null;
+            bool? wasTheGameEnded_Left = null;
+            bool? wasTheGameEnded_Right = null;
 
             while (true)
             {
@@ -193,15 +186,22 @@ namespace Runner.Classes
                     try
                     {
                         _plc.Active = true;
-                        wasTheGameEnded = (bool)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
-                        if (wasTheGameEnded != null && wasTheGameEnded == true)
+                        //Controllo se è attiva la variabile di fine lavoro
+                        wasTheGameEnded_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
+#warning cambiare variabile da leggere
+                        wasTheGameEnded_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
+
+
+                        if (wasTheGameEnded_Left.Value || wasTheGameEnded_Right.Value)
                         {
                             //salvataggio log nel database
-                            Classes.Database.WriteLog(new productionLog() { 
+                            Classes.Database.WriteLog(new productionLog()
+                            {
                                 CodiceArticolo = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.CodiceArticolo),
                                 Lotto = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Lotto),
                                 TempoCiclo = (int)(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.TempoCiclo)),
                                 Waste = false,
+#warning aggiungere variabile da impostare per salvataggio da destra o sinistra
                             });
                             _plc.WriteVariable(Classes.PlcVariableName.EndOfTheGame, false);
                         }
@@ -222,20 +222,15 @@ namespace Runner.Classes
 
         }
 
-        public void AsyncCheckEndOfTheGame()
-        {
-
-            Thread asyncEndOfTheGame = new Thread(CheckEndOfTheGame);
-            asyncEndOfTheGame.IsBackground = true;
-            asyncEndOfTheGame.Start();
-
-        }
-
+        /// <summary>
+        /// Controllo per richiesta Scarti
+        /// </summary>
         public void CheckForWaste()
         {
             //Se viene rilevata la presenza di fine lavorazione, viene salvata
             //nel database, altrimenti non verrà eseguita nessuna azione
-            bool? DoWeHaveAnyWaste = null;
+            bool? DoWeHaveAnyWaste_Left = null;
+            bool? DoWeHaveAnyWaste_Right = null;
 
             while (true)
             {
@@ -246,11 +241,15 @@ namespace Runner.Classes
                     try
                     {
                         _plc.Active = true;
-                        DoWeHaveAnyWaste = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWaste);
-                        if (DoWeHaveAnyWaste != null && DoWeHaveAnyWaste == true)
+                        DoWeHaveAnyWaste_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWaste);
+                        DoWeHaveAnyWaste_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWaste);
+                        #warning aggiungere giusta variabile
+                        if (DoWeHaveAnyWaste_Left.Value || DoWeHaveAnyWaste_Right.Value)
                         {
+                            #warning aggiungere controllo per scarto di destra o di sinistra
+                            // riporto il valore del plc a false, in modo da riabilitare il comando
                             _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWaste, false);
-                            Database.SubRecepyNumber();
+                            Database.SubRecepyNumber(DoWeHaveAnyWaste_Left.Value ? true : false);
                         }
                     }
                     catch (Exception ex)
@@ -267,13 +266,41 @@ namespace Runner.Classes
                 Thread.Sleep(2000);
             }
         }
+        #endregion
 
+
+        #region async Launcher
+        public void AsyncHeartBeat()
+        {
+
+            Thread asyncBeater = new Thread(HeartBeat);
+            asyncBeater.IsBackground = true;
+            asyncBeater.Start();
+
+        }
         public void AsyncCheckForWaste()
         {
             Thread wasteCollector = new Thread(CheckForWaste);
             wasteCollector.IsBackground = true;
             wasteCollector.Start();
         }
+        public void AsyncCheckEndOfTheGame()
+        {
+
+            Thread asyncEndOfTheGame = new Thread(CheckEndOfTheGame);
+            asyncEndOfTheGame.IsBackground = true;
+            asyncEndOfTheGame.Start();
+
+        }
+        public void AsyncScreebaLoop()
+        {
+
+            Thread debugLoop = new Thread(Screeba);
+            debugLoop.IsBackground = true;
+            debugLoop.Start();
+
+        }
+        #endregion
 
     }
 }

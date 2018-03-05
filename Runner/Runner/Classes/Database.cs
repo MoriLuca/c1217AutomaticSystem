@@ -64,14 +64,19 @@ namespace Runner.Classes
             }
         }
 
-        public static void SubRecepyNumber()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="where">0)destra 1)Sinistra</param>
+        public static void SubRecepyNumber(bool direction)
         {
             try
             {
                 using (var contex = new Classes.ProduzioneEntities())
                 {
-                    
-                    Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id).FirstOrDefault();
+
+                    Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id)
+                        .Where(l => l.Direction == direction && l.Waste == false).FirstOrDefault();
                     log.Waste = true;
 
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
