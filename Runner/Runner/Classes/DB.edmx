@@ -20,10 +20,13 @@
             <PropertyRef Name="id" />
           </Key>
           <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="OraLog" Type="datetime" />
           <Property Name="Lotto" Type="nvarchar" MaxLength="50" />
           <Property Name="CodiceArticolo" Type="nvarchar" MaxLength="50" />
           <Property Name="TempoCiclo" Type="int" />
           <Property Name="Waste" Type="bit" />
+          <Property Name="Stazione" Type="bit" />
+          <Property Name="Turno" Type="int" />
         </EntityType>
         <EntityContainer Name="ProduzioneModelStoreContainer">
           <EntitySet Name="production2plc" EntityType="Self.production2plc" Schema="dbo" store:Type="Tables" />
@@ -52,6 +55,9 @@
           <Property Name="CodiceArticolo" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
           <Property Name="TempoCiclo" Type="Int32" />
           <Property Name="Waste" Type="Boolean" />
+          <Property Name="OraLog" Type="DateTime" Precision="3" />
+          <Property Name="Stazione" Type="Boolean" />
+          <Property Name="Turno" Type="Int32" />
         </EntityType>
         <EntityContainer Name="ProduzioneEntities" annotation:LazyLoadingEnabled="true">
           <EntitySet Name="production2plc" EntityType="Self.production2plc" />
@@ -77,6 +83,9 @@
           <EntitySetMapping Name="productionLogs">
             <EntityTypeMapping TypeName="ProduzioneModel.productionLog">
               <MappingFragment StoreEntitySet="productionLog">
+                <ScalarProperty Name="Turno" ColumnName="Turno" />
+                <ScalarProperty Name="Stazione" ColumnName="Stazione" />
+                <ScalarProperty Name="OraLog" ColumnName="OraLog" />
                 <ScalarProperty Name="Waste" ColumnName="Waste" />
                 <ScalarProperty Name="id" ColumnName="id" />
                 <ScalarProperty Name="Lotto" ColumnName="Lotto" />

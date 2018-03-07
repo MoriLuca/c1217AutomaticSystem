@@ -76,7 +76,7 @@ namespace Runner.Classes
                 {
 
                     Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id)
-                        .Where(l => l.Direction == direction && l.Waste == false).FirstOrDefault();
+                        .Where(l => l.Stazione == direction && l.Waste == false).FirstOrDefault();
                     log.Waste = true;
 
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();

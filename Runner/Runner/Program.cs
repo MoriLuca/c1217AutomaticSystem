@@ -12,14 +12,12 @@ namespace Runner
         static void Main(string[] args)
         {
             Classes.PLCWorker _plc = new Classes.PLCWorker();
+            Console.WriteLine("-- Inizio Programma --\n");
             _plc.AsyncHeartBeat();
             _plc.AsyncScreebaLoop();
             _plc.AsyncCheckEndOfTheGame();
-            _plc.AsyncCheckForWaste();
-            while (true)
-            {
-                Thread.Sleep(300);
-            }
+            //_plc.AsyncCheckForWaste();
+            Console.ReadLine();
         }
     }
 }

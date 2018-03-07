@@ -17,7 +17,7 @@ namespace Runner.Classes
     {
         #region proprietà
         private object _comunicationLock;
-
+        private string _newLine = "********************************************************";
         //PLC utilizzato per l'applicazione
 
 #if (NX)
@@ -38,6 +38,26 @@ namespace Runner.Classes
         #endregion
 
         #region metodi
+
+        private void ConsoleWriteOnEventSuccess(string s)
+        {
+            Console.WriteLine(_newLine);
+            Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine(s);
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine(_newLine);
+        }
+
+        private void ConsoleWriteOnEventError(string s)
+        {
+            Console.WriteLine(_newLine);
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine(s);
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine(_newLine + Environment.NewLine);
+
+        }
+
         ///<summary>Test Connessione con plc </summary>
         public void HeartBeat()
         {
@@ -58,12 +78,12 @@ namespace Runner.Classes
                         if (!uselessBool.Value)
                         {
                             _plc.WriteVariable("HandShake", true);
+                            ConsoleWriteOnEventSuccess("Heartbeat: Comunicazione con PLC OK! - PLC Address : " + _plc.PeerAddress);
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.Write("Heartbeat Error: Eccezione in lettura PLC.");
-                        Console.WriteLine(ex.Message);
+                        ConsoleWriteOnEventError("Heartbeat Error: Eccezione in lettura PLC : "+ex.Message);
                     }
                     finally
                     {
@@ -71,7 +91,7 @@ namespace Runner.Classes
                     }
                 }
                 // tempo arbitrario per test di connessione
-                Thread.Sleep(3500);
+                Thread.Sleep(5000);
             }
 
         }
@@ -146,20 +166,18 @@ namespace Runner.Classes
                             }
 
                         }
-
+                        watch.Stop();
+                        ConsoleWriteOnEventSuccess("Scrittura ricette aggiornate avvenuta in : " + watch.ElapsedMilliseconds + " ms");
                     }
                     catch (Exception ex)
                     {
-                        Console.Write("Screeba Error [Srcittura ricette su PLC] : ");
-                        Console.WriteLine(ex.Message);
+                        watch.Stop();
+                        ConsoleWriteOnEventError("Screeba Error [Srcittura ricette su PLC] : " + ex.Message);
                     }
                     finally
                     {
                         _plc.Active = false;
                     }
-                    watch.Stop();
-                    Console.WriteLine("Scrittura ricette aggiornate avvenuta in : "+watch.ElapsedMilliseconds+" ms");
-
                 }
 
                 Thread.Sleep(5000);
@@ -174,8 +192,7 @@ namespace Runner.Classes
             //Se viene rilevata la presenza di fine lavorazione, viene salvata
             //nel database, altrimenti non verrà eseguita nessuna azione
 
-            bool? wasTheGameEnded_Left = null;
-            bool? wasTheGameEnded_Right = null;
+            bool? wasTheGameEnded = null;
 
             while (true)
             {
@@ -187,12 +204,10 @@ namespace Runner.Classes
                     {
                         _plc.Active = true;
                         //Controllo se è attiva la variabile di fine lavoro
-                        wasTheGameEnded_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
-#warning cambiare variabile da leggere
-                        wasTheGameEnded_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
+                        wasTheGameEnded = (bool)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
 
 
-                        if (wasTheGameEnded_Left.Value || wasTheGameEnded_Right.Value)
+                        if (wasTheGameEnded.Value)
                         {
                             //salvataggio log nel database
                             Classes.Database.WriteLog(new productionLog()
@@ -201,15 +216,14 @@ namespace Runner.Classes
                                 Lotto = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Lotto),
                                 TempoCiclo = (int)(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.TempoCiclo)),
                                 Waste = false,
-#warning aggiungere variabile da impostare per salvataggio da destra o sinistra
+                                Stazione = (bool)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.sta),
                             });
                             _plc.WriteVariable(Classes.PlcVariableName.EndOfTheGame, false);
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.Write("End Of The Game Error :");
-                        Console.WriteLine(ex.Message);
+                        ConsoleWriteOnEventError("End Of The Game Error : "+ex.Message);
                     }
                     finally
                     {

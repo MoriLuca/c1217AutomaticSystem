@@ -17,7 +17,8 @@ namespace Runner.Classes
         public static string EndOfTheGame { get; } = "TriggerSalvataggioDati";
 
         //Trigger di scarto, l'ultima lavorazione conlusa, verrà segnata come scarto
-        public static string LastOneIsWaste { get; } = "ScartoUltimoPezzo";
+        public static string LastOneIsWasteRight { get; } = "ScartoUltimoPezzoDestra";
+        public static string LastOneIsWasteLeft { get; } = "ScartoUltimoPezzoSinistra";
         #endregion
 
         #region Server 2 Plc
@@ -83,6 +84,8 @@ namespace Runner.Classes
             public static string NumeroPezziProdotti { get; } = "ProduzionePezziAServer.NumeroPezzi";
             public static string TempoCiclo { get; } = "ProduzionePezziAServer.TempoCiclo";
             public static string Lotto { get; } = "ProduzionePezziAServer.Lotto";
+            public static string Stazione { get; } = "ProduzionePezziAServer.Stazione"; //destra o sinistra
+            public static string Turno { get; } = "ProduzionePezziAServer.Turno";
         }
         #endregion
     }

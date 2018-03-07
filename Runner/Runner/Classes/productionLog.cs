@@ -19,7 +19,8 @@ namespace Runner.Classes
         public string CodiceArticolo { get; set; }
         public Nullable<int> TempoCiclo { get; set; }
         public Nullable<bool> Waste { get; set; }
-        // Direction = 0) Destra - 1) Sinistra
-        public bool Direction { get; set; }
+        public Nullable<System.DateTime> OraLog { get; set; }
+        public Nullable<bool> Stazione { get; set; }
+        public Nullable<int> Turno { get; set; }
     }
 }
