@@ -1,15 +1,11 @@
-﻿//#define NJ
-#undef NJ
-#define NX
-//#undef NX
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using OMRON.Compolet.CIP;
 using System.Threading;
+using System.IO;
 
 namespace Runner.Classes
 {
@@ -17,15 +13,15 @@ namespace Runner.Classes
     {
         #region proprietà
         private object _comunicationLock;
-        private string _newLine = "********************************************************";
+        private string _newLine = "******************************************************************************";
+        string _writeOnPaper;
+        //i seguenti booleani servono per non ripetere continuamente lo stato di errore
+        private bool? _heartBeatStatus;
+        private bool? _EndOfTheGameStatus;
+        // lista utilizzata per verificare la necessita di scrivere la lista aggioranta sul plc
+        List<Classes.production2plc> _ultimaListaProduzione = new List<production2plc>();
         //PLC utilizzato per l'applicazione
-
-#if (NX)
         private NXCompolet _plc = new NXCompolet();
-#endif
-#if (NJ)
-        private NJCompolet _plc = new NJCompolet();
-#endif
         #endregion
 
         #region costruttore
@@ -39,23 +35,46 @@ namespace Runner.Classes
 
         #region metodi
 
+        private void writeEventOnPaper(string s)
+        {
+            string mex = DateTime.Now + " - " + s + Environment.NewLine;
+            _writeOnPaper += mex;
+            try
+            {
+                string folderName = DateTime.Now.Date.ToString("dd_MM_yy");
+                if (!Directory.Exists($"Log/{folderName}")) Directory.CreateDirectory($"Log/{folderName}");
+                if (!File.Exists($"Log/{folderName}/report.txt")) File.Create($"Log/{folderName}/report.txt").Close();
+                File.AppendAllText($"Log/{folderName}/report.txt", mex);
+                _writeOnPaper = "";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Errore scrittura log su file txt : "+ex.Message);
+            }
+        }
+
         private void ConsoleWriteOnEventSuccess(string s)
         {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine(_newLine);
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine(s);
-            Console.ForegroundColor = ConsoleColor.White;
+            Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine(_newLine);
+            Console.ForegroundColor = ConsoleColor.White;
+            writeEventOnPaper(s);
         }
 
         private void ConsoleWriteOnEventError(string s)
         {
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(_newLine);
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(s);
-            Console.ForegroundColor = ConsoleColor.White;
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(_newLine + Environment.NewLine);
-
+            Console.ForegroundColor = ConsoleColor.White;
+            writeEventOnPaper(s);
         }
 
         ///<summary>Test Connessione con plc </summary>
@@ -74,16 +93,27 @@ namespace Runner.Classes
                     try
                     {
                         _plc.Active = true;
-                        uselessBool = (bool)_plc.ReadVariable("HandShake");
+                        uselessBool = (bool?)_plc.ReadVariable("HandShake");
                         if (!uselessBool.Value)
                         {
                             _plc.WriteVariable("HandShake", true);
-                            ConsoleWriteOnEventSuccess("Heartbeat: Comunicazione con PLC OK! - PLC Address : " + _plc.PeerAddress);
+                            //controllo se lo stato è differente dall'ultima volta
+                            if (!_heartBeatStatus.HasValue || !_heartBeatStatus.Value)
+                            {
+                                _heartBeatStatus = true;
+                                ConsoleWriteOnEventSuccess("Heartbeat: Comunicazione con PLC OK! - PLC Address : " + _plc.PeerAddress);
+
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
-                        ConsoleWriteOnEventError("Heartbeat Error: Eccezione in lettura PLC : "+ex.Message);
+                        if (!_heartBeatStatus.HasValue || _heartBeatStatus.Value )
+                        {
+                            _heartBeatStatus = false;
+                            ConsoleWriteOnEventError("Heartbeat Error: Eccezione in lettura PLC : " + ex.Message);
+                        }
+                        
                     }
                     finally
                     {
@@ -149,34 +179,58 @@ namespace Runner.Classes
                 {
                     //lettura ricette da database
                     List<Classes.production2plc> listaProduzione = Classes.Database.ReadRecepies();
-                    var watch = System.Diagnostics.Stopwatch.StartNew();
-
+                    if (listaProduzione.Count != _ultimaListaProduzione.Count) _ultimaListaProduzione = new List<production2plc>(listaProduzione.Count);
+                    bool ricetteUguali = true;
                     try
                     {
-                        _plc.Active = true;
-
                         for (int i = 0; i < listaProduzione.Count; i++)
                         {
-                            if (listaProduzione[i].Lotto != null)
+                            if (!listaProduzione[i].IsEqualTo(_ultimaListaProduzione[i]))
                             {
-                                _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[i], (Int16)listaProduzione[i].NumeroPezziTotali);
-                                _plc.WriteVariable(Classes.PlcVariableName.NumeroPezziAttuale[i], (Int16)listaProduzione[i].NumeroParziale);
-                                _plc.WriteVariable(Classes.PlcVariableName.Lotti[i], listaProduzione[i].Lotto);
-                                _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[i], listaProduzione[i].CodiceArticolo);
+                                ricetteUguali = false;
+                                break;
                             }
-
                         }
-                        watch.Stop();
-                        ConsoleWriteOnEventSuccess("Scrittura ricette aggiornate avvenuta in : " + watch.ElapsedMilliseconds + " ms");
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        watch.Stop();
-                        ConsoleWriteOnEventError("Screeba Error [Srcittura ricette su PLC] : " + ex.Message);
+
+                        ricetteUguali = false;
                     }
-                    finally
+                    
+                    if (!ricetteUguali)
                     {
-                        _plc.Active = false;
+                        _ultimaListaProduzione = listaProduzione;
+
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+                        try
+                        {
+                            _plc.Active = true;
+
+                            for (int i = 0; i < listaProduzione.Count; i++)
+                            {
+                                if (listaProduzione[i].Lotto != null)
+                                {
+                                    _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[i], (Int16)listaProduzione[i].NumeroPezziTotali);
+                                    _plc.WriteVariable(Classes.PlcVariableName.NumeroPezziAttuale[i], (Int16)listaProduzione[i].NumeroParziale);
+                                    _plc.WriteVariable(Classes.PlcVariableName.Lotti[i], listaProduzione[i].Lotto);
+                                    _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[i], listaProduzione[i].CodiceArticolo);
+                                }
+
+                            }
+                            watch.Stop();
+                            ConsoleWriteOnEventSuccess("Scrittura ricette aggiornate avvenuta in : " + watch.ElapsedMilliseconds + " ms");
+                        }
+                        catch (Exception ex)
+                        {
+                            watch.Stop();
+                            ConsoleWriteOnEventError("Screeba Error [Srcittura ricette su PLC] : " + ex.Message);
+                        }
+                        finally
+                        {
+                            _plc.Active = false;
+                        }
                     }
                 }
 
@@ -201,6 +255,7 @@ namespace Runner.Classes
                 lock (_comunicationLock)
                 {
                     try
+
                     {
                         _plc.Active = true;
                         //Controllo se è attiva la variabile di fine lavoro
@@ -209,21 +264,46 @@ namespace Runner.Classes
 
                         if (wasTheGameEnded.Value)
                         {
-                            //salvataggio log nel database
-                            Classes.Database.WriteLog(new productionLog()
+                            productionLog p = new productionLog()
                             {
+                                OraLog = DateTime.Now,
                                 CodiceArticolo = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.CodiceArticolo),
                                 Lotto = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Lotto),
                                 TempoCiclo = (int)(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.TempoCiclo)),
-                                Waste = false,
-                                Stazione = (bool)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.sta),
-                            });
+                                Waste = false, //Forzato a falso perche il pezzo appena finito non puo essere scarto
+                                Stazione = 0,//(int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Stazione),
+                                Turno = 1//(int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Turno)
+                            };
+
+                            //salvataggio log nel database
+                            Classes.Database.WriteLog(p);
+                            //Riabilito la possibilità dello scarto su plc
                             _plc.WriteVariable(Classes.PlcVariableName.EndOfTheGame, false);
+                            TimeSpan durataCiclo = TimeSpan.FromSeconds((float)p.TempoCiclo / 10);
+                            string success = "Nuovo pezzo prodotto :\n";
+                            success += $"Data e Ora : {p.OraLog}" + Environment.NewLine;
+                            success += $"Codice Articolo : {p.CodiceArticolo}"+Environment.NewLine;
+                            success += $"Lotto : {p.Lotto}" + Environment.NewLine;
+                            success += $"TempoCiclo : {durataCiclo.ToString(@"hh\:mm\:ss")}" + Environment.NewLine;
+                            success += $"Stazione : {p.Stazione}" + Environment.NewLine;
+                            success += $"Turno : {p.Turno}" + Environment.NewLine;
+
+                            ConsoleWriteOnEventSuccess(success);
+                        }
+                        if(!_EndOfTheGameStatus.HasValue || !_EndOfTheGameStatus.HasValue)
+                        {
+                            _EndOfTheGameStatus = true;
+                            ConsoleWriteOnEventSuccess("Controllo Fine Pezzo eseguito correttamente");
                         }
                     }
                     catch (Exception ex)
                     {
-                        ConsoleWriteOnEventError("End Of The Game Error : "+ex.Message);
+                        if (!_EndOfTheGameStatus.HasValue || _EndOfTheGameStatus.HasValue)
+                        {
+                            _EndOfTheGameStatus = false;
+                            ConsoleWriteOnEventError("End Of The Game Error : " + ex.Message);
+                        }
+                        
                     }
                     finally
                     {
@@ -255,21 +335,32 @@ namespace Runner.Classes
                     try
                     {
                         _plc.Active = true;
-                        DoWeHaveAnyWaste_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWaste);
-                        DoWeHaveAnyWaste_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWaste);
-                        #warning aggiungere giusta variabile
+                        DoWeHaveAnyWaste_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteLeft);
+                        DoWeHaveAnyWaste_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteRight);
                         if (DoWeHaveAnyWaste_Left.Value || DoWeHaveAnyWaste_Right.Value)
                         {
-                            #warning aggiungere controllo per scarto di destra o di sinistra
-                            // riporto il valore del plc a false, in modo da riabilitare il comando
-                            _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWaste, false);
-                            Database.SubRecepyNumber(DoWeHaveAnyWaste_Left.Value ? true : false);
+                            if (DoWeHaveAnyWaste_Left.Value)
+                            {
+                                // riporto il valore del plc a false, in modo da riabilitare il comando
+                                _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWasteLeft, false);
+                                string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Sinistra);
+                                if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
+                                else ConsoleWriteOnEventError(mex);
+                            }
+                            else 
+                            {
+                                // riporto il valore del plc a false, in modo da riabilitare il comando
+                                _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWasteRight, false);
+                                string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Destra);
+                                if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
+                                else ConsoleWriteOnEventError(mex);
+                            }
+
                         }
                     }
                     catch (Exception ex)
                     {
-                        Console.Write("Check for waste Error:");
-                        Console.WriteLine(ex.Message);
+                        ConsoleWriteOnEventError("Check for waste Error: "+ex.Message);
                     }
                     finally
                     {

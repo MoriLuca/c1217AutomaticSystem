@@ -21,6 +21,14 @@ namespace Runner.Classes
         public static string LastOneIsWasteLeft { get; } = "ScartoUltimoPezzoSinistra";
         #endregion
 
+        #region enum
+        public enum StazioneSaldatrice
+        {
+            Destra = 0,
+            Sinistra = 1
+        }
+        #endregion
+
         #region Server 2 Plc
         // Stringhe -- variabili contenenti il codice articolo
         public static List<string> CodiceArticoli = new List<string>()

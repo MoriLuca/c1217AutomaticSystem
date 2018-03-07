@@ -4,9 +4,9 @@
 "ProjectType" = "8:{978C614F-708E-4E1A-B201-565925725DBA}"
 "IsWebType" = "8:FALSE"
 "ProjectName" = "8:RunnerInstaller"
-"LanguageId" = "3:1033"
+"LanguageId" = "3:1040"
 "CodePage" = "3:1252"
-"UILanguageId" = "3:1033"
+"UILanguageId" = "3:1040"
 "SccProjectName" = "8:"
 "SccLocalPath" = "8:"
 "SccAuxPath" = "8:"
@@ -89,6 +89,12 @@
         {
         "MsmKey" = "8:_4147E892EA90C694A15C2C6DF6A096DF"
         "OwnerKey" = "8:_2F5D4333278BBD5248D557716158A68C"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
+        "MsmKey" = "8:_5CE5A50E49BE41FAB323C91DAAFAF83E"
+        "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
@@ -380,6 +386,14 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.6.1"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.6.1 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.6.1"
+                    }
+                }
             }
         }
         "Release"
@@ -404,6 +418,14 @@
             "PrerequisitesLocation" = "2:1"
             "Url" = "8:"
             "ComponentsUrl" = "8:"
+                "Items"
+                {
+                    "{EDC2488A-8267-493A-A98E-7D9C3B36CDF3}:.NETFramework,Version=v4.6.1"
+                    {
+                    "Name" = "8:Microsoft .NET Framework 4.6.1 (x86 and x64)"
+                    "ProductCode" = "8:.NETFramework,Version=v4.6.1"
+                    }
+                }
             }
         }
     }
@@ -587,6 +609,26 @@
             "Register" = "3:1"
             "Exclude" = "11:FALSE"
             "IsDependency" = "11:TRUE"
+            "IsolateTo" = "8:"
+            }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_5CE5A50E49BE41FAB323C91DAAFAF83E"
+            {
+            "SourcePath" = "8:..\\..\\..\\..\\..\\Downloads\\runner.ico"
+            "TargetName" = "8:runner.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_0FB404C3D86D40EF874A86B8F8834659"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
             "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_647B7B50FEC7C8A46DC2CAB9D8F72684"
@@ -886,28 +928,28 @@
         }
         "MsiBootstrapper"
         {
-        "LangId" = "3:1033"
+        "LangId" = "3:1040"
         "RequiresElevation" = "11:FALSE"
         }
         "Product"
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:RunnerInstaller"
-        "ProductCode" = "8:{C90CFB8A-FD2D-4764-817A-4F0959E443FA}"
-        "PackageCode" = "8:{EEA32F64-3797-4DCA-BF67-A26FFB6EE19A}"
+        "ProductCode" = "8:{E529AA3C-0D50-46D6-B882-00EA3C8558A3}"
+        "PackageCode" = "8:{BA75E8A1-4E90-468B-89B2-6C1DDE770C18}"
         "UpgradeCode" = "8:{5404A0E5-C962-4AF0-AEF6-62B0ABDE699F}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
-        "RemovePreviousVersions" = "11:FALSE"
+        "RemovePreviousVersions" = "11:TRUE"
         "DetectNewerInstalledVersion" = "11:TRUE"
-        "InstallAllUsers" = "11:FALSE"
-        "ProductVersion" = "8:1.0.0"
-        "Manufacturer" = "8:Default Company Name"
+        "InstallAllUsers" = "11:TRUE"
+        "ProductVersion" = "8:2.0.0"
+        "Manufacturer" = "8:GiDi Automazione"
         "ARPHELPTELEPHONE" = "8:"
         "ARPHELPLINK" = "8:"
         "Title" = "8:RunnerInstaller"
         "Subject" = "8:"
-        "ARPCONTACT" = "8:Default Company Name"
+        "ARPCONTACT" = "8:Mori Luca - Gidi Automazione"
         "Keywords" = "8:"
         "ARPCOMMENTS" = "8:"
         "ARPURLINFOABOUT" = "8:"
@@ -1025,7 +1067,7 @@
             "Target" = "8:_C3CA080A96DE41579988D4D0766983E2"
             "Folder" = "8:_B66C2899A7B34617BF1065A7AB7B51D5"
             "WorkingFolder" = "8:_0FB404C3D86D40EF874A86B8F8834659"
-            "Icon" = "8:"
+            "Icon" = "8:_5CE5A50E49BE41FAB323C91DAAFAF83E"
             "Feature" = "8:"
             }
         }
@@ -1429,7 +1471,7 @@
         {
             "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_C3CA080A96DE41579988D4D0766983E2"
             {
-            "SourcePath" = "8:..\\Runner\\obj\\Release\\Runner.exe"
+            "SourcePath" = "8:..\\Runner\\obj\\Debug\\Runner.exe"
             "TargetName" = "8:"
             "Tag" = "8:"
             "Folder" = "8:_0FB404C3D86D40EF874A86B8F8834659"

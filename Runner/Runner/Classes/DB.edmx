@@ -20,12 +20,12 @@
             <PropertyRef Name="id" />
           </Key>
           <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
-          <Property Name="OraLog" Type="datetime" />
+          <Property Name="OraLog" Type="datetime" Nullable="false" />
           <Property Name="Lotto" Type="nvarchar" MaxLength="50" />
           <Property Name="CodiceArticolo" Type="nvarchar" MaxLength="50" />
           <Property Name="TempoCiclo" Type="int" />
           <Property Name="Waste" Type="bit" />
-          <Property Name="Stazione" Type="bit" />
+          <Property Name="Stazione" Type="int" />
           <Property Name="Turno" Type="int" />
         </EntityType>
         <EntityContainer Name="ProduzioneModelStoreContainer">
@@ -55,8 +55,8 @@
           <Property Name="CodiceArticolo" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
           <Property Name="TempoCiclo" Type="Int32" />
           <Property Name="Waste" Type="Boolean" />
-          <Property Name="OraLog" Type="DateTime" Precision="3" />
-          <Property Name="Stazione" Type="Boolean" />
+          <Property Name="OraLog" Type="DateTime" Precision="3" Nullable="false" />
+          <Property Name="Stazione" Type="Int32" />
           <Property Name="Turno" Type="Int32" />
         </EntityType>
         <EntityContainer Name="ProduzioneEntities" annotation:LazyLoadingEnabled="true">

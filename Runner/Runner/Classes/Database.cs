@@ -32,11 +32,7 @@ namespace Runner.Classes
             {
                 using (var contex = new Classes.ProduzioneEntities())
                 {
-                    contex.productionLogs.Add(new productionLog {
-                        CodiceArticolo = dataToLog.CodiceArticolo,
-                        Lotto = dataToLog.Lotto,
-                        TempoCiclo = dataToLog.TempoCiclo,
-                    });
+                    contex.productionLogs.Add(dataToLog);
                     contex.SaveChanges();
                 }
                 AddRecepyNumber(dataToLog.Lotto);
@@ -67,17 +63,24 @@ namespace Runner.Classes
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="where">0)destra 1)Sinistra</param>
-        public static void SubRecepyNumber(bool direction)
+        /// <param name="stazioneSaldatrice"></param>
+        /// <returns>Stringa per console</returns>
+        public static string SubRecepyNumber(PlcVariableName.StazioneSaldatrice stazioneSaldatrice)
         {
+            string message = "";
+
             try
             {
                 using (var contex = new Classes.ProduzioneEntities())
                 {
 
+                    // Assegno ad un nuovo log, il valore dell'ultimo record inserito, non marcato come scarto, che è 
+                    // stato lavorato nella stazione passata come parametro
                     Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id)
-                        .Where(l => l.Stazione == direction && l.Waste == false).FirstOrDefault();
+                        .Where(l => l.Stazione == (int)stazioneSaldatrice && l.Waste == false).FirstOrDefault();
+                    // assegno il valore di scarto
                     log.Waste = true;
+
 
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
                     if (ricetta.NumeroParziale > 0)
@@ -85,12 +88,21 @@ namespace Runner.Classes
                         ricetta.NumeroParziale--;
                     }
                     contex.SaveChanges();
+                    string stazione;
+                    if ((int)log.Stazione == 0) stazione = "Sinistra";
+                    else stazione = "Destra";
+                    message = $"Scartata la lavorazione con Lotto {log.Lotto}, Codice Articolo {log.CodiceArticolo}, lavorata dalla stazione {stazione},\n";
+                    message += $"Alle ore {log.OraLog}, Turno {log.Turno}";
+                    return message;
                 }
+
+                
             }
             catch (Exception ex)
             {
-                Console.WriteLine( "SubRecepyNumber" + ex.Message);
+                return( "Error - SubRecepyNumber " + ex.Message);
             }
+            
         }
     }
 }
