@@ -10,6 +10,11 @@ namespace Runner.Classes
     {
         public static object locker = new object();
 
+        public struct ResocontoOrdine{
+            public string CodiceArticolo;
+            public int Produzione;
+        }
+
         public static List<Classes.production2plc> ReadRecepies()
         {
             try
@@ -43,6 +48,124 @@ namespace Runner.Classes
             }
         }
 
+        // Legge la produzione dal database, in base ai parametri passati
+        public static int ReadProduction(DateTime giorno)
+        {
+            try
+            {
+                using (var contex = new Classes.ProduzioneEntities())
+                {
+                    return contex.productionLogs.Where(c => c.OraLog.Day == giorno.Day).ToList().Count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Read production error : " + ex.Message);
+                return -1;
+            }
+        }
+        public static int ReadProduction(DateTime giorno, int turno)
+        {
+            try
+            {
+                using (var contex = new Classes.ProduzioneEntities())
+                {
+                    return contex.productionLogs.Where(c => c.OraLog.Day == giorno.Day
+                        && c.Turno == turno).ToList().Count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Read production error : " + ex.Message);
+                return -1;
+            }
+        }
+        public static int ReadProduction(string codiceArticolo)
+        {
+            try
+            {
+                using (var contex = new Classes.ProduzioneEntities())
+                {
+                    return contex.productionLogs.Where(c => c.CodiceArticolo.Trim() == codiceArticolo.Trim()
+                        && c.OraLog.Day == DateTime.Today.Day).ToList().Count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Read production error : "+ ex.Message);
+                return -1;
+            }
+        }
+        public static int ReadProduction(string codiceArticolo, DateTime giorno)
+        {
+            try
+            {
+                using (var contex = new Classes.ProduzioneEntities())
+                {
+                    return contex.productionLogs.Where(c => c.CodiceArticolo.Trim() == codiceArticolo.Trim()
+                        && giorno.Day == giorno.Day).ToList().Count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Read production error : " + ex.Message);
+                return -1;
+            }
+        }
+        public static int ReadProduction(string codiceArticolo, int turno)
+        {
+            try
+            {
+                using (var contex = new Classes.ProduzioneEntities())
+                {
+                    return contex.productionLogs.Where(c => c.CodiceArticolo.Trim() == codiceArticolo.Trim()
+                        && c.Turno == turno).ToList().Count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Read production error : " + ex.Message);
+                return -1;
+            }
+        }
+        public static int ReadProduction(string codiceArticolo, int turno, DateTime giorno)
+        {
+            try
+            {
+                using (var contex = new Classes.ProduzioneEntities())
+                {
+                    return contex.productionLogs.Where(c => c.CodiceArticolo.Trim() == codiceArticolo.Trim()
+                        && c.Turno == turno && c.OraLog.Day == giorno.Day).ToList().Count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Read production error : " + ex.Message);
+                return -1;
+            }
+        }
+        //ritorna la produzione giornaliera degli ultimi due codici lavorati
+        public static ResocontoOrdine[] ReadDailyProductionLastTwoWorkedCode()
+        {
+            try
+            {
+                ResocontoOrdine uno, due;
+
+                using (var contex = new Classes.ProduzioneEntities())
+                {
+                    uno.CodiceArticolo = contex.productionLogs.OrderByDescending(i=>i.id).FirstOrDefault().CodiceArticolo;
+                    due.CodiceArticolo = contex.productionLogs.Where(l=>l.CodiceArticolo != uno.CodiceArticolo).OrderByDescending(i => i.id).FirstOrDefault().CodiceArticolo;
+                    uno.Produzione = ReadProduction(uno.CodiceArticolo, DateTime.Today);
+                    due.Produzione = ReadProduction(due.CodiceArticolo, DateTime.Today);
+                    return new ResocontoOrdine[] { uno, due };
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Read production error : " + ex.Message);
+                return null;
+            }
+        }
         private static void AddRecepyNumber(string nomeLotto)
         {
             try
@@ -59,13 +182,12 @@ namespace Runner.Classes
                 Console.WriteLine();
             }
         }
-
         /// <summary>
         /// 
         /// </summary>
         /// <param name="stazioneSaldatrice"></param>
         /// <returns>Stringa per console</returns>
-        public static string SubRecepyNumber(PlcVariableName.StazioneSaldatrice stazioneSaldatrice)
+        public static string SubRecepyNumber(PlcVariableName.StazioneSaldatrice stazioneSaldatrice, int idLavorazione)
         {
             string message = "";
 
@@ -77,7 +199,7 @@ namespace Runner.Classes
                     // Assegno ad un nuovo log, il valore dell'ultimo record inserito, non marcato come scarto, che è 
                     // stato lavorato nella stazione passata come parametro
                     Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id)
-                        .Where(l => l.Stazione == (int)stazioneSaldatrice && l.Waste == false).FirstOrDefault();
+                        .Where(l => l.Stazione == (int)stazioneSaldatrice && l.Waste == false && l.IdLavorazione == idLavorazione).FirstOrDefault();
                     // assegno il valore di scarto
                     log.Waste = true;
 
@@ -89,7 +211,7 @@ namespace Runner.Classes
                     }
                     contex.SaveChanges();
                     string stazione;
-                    if ((int)log.Stazione == 0) stazione = "Sinistra";
+                    if ((int)log.Stazione == 1) stazione = "Sinistra";
                     else stazione = "Destra";
                     message = $"Scartata la lavorazione con Lotto {log.Lotto}, Codice Articolo {log.CodiceArticolo}, lavorata dalla stazione {stazione},\n";
                     message += $"Alle ore {log.OraLog}, Turno {log.Turno}";

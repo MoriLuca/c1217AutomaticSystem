@@ -17,8 +17,36 @@ namespace Runner.Classes
         public static string EndOfTheGame { get; } = "TriggerSalvataggioDati";
 
         //Trigger di scarto, l'ultima lavorazione conlusa, verrà segnata come scarto
-        public static string LastOneIsWasteRight { get; } = "ScartoUltimoPezzoDestra";
-        public static string LastOneIsWasteLeft { get; } = "ScartoUltimoPezzoSinistra";
+        public static string LastOneIsWasteRight { get; } = "ScartoUltimoPezzoDx";
+        public static string LastOneIsWasteLeft { get; } = "ScartoUltimoPezzoSx";
+        public static string QuantitaScartiDestra { get; } = "QuantitaScartiDx";
+        public static string QuantitaScartiSinistra { get; } = "QuantitaScartiSx";
+
+        public static string ContatoreLavorazioneDestra { get; } = "ContatoreLavorazioneDx";
+        public static string ContatoreLavorazioneSinistra { get; } = "ContatoreLavorazioneSx";
+
+        public static string ProduzioneUltimoCodice1 { get; } = "ProduzioneTotlaeUltimoCodice1";
+        public static string Ora_Inizio_Turno_1 { get; } = "Ora_Inizio_Turno_1";
+
+        public static string pathReportGlobale1 { get; } = "ReportGlobale1";
+        public static string pathReportGlobale2 { get; } = "ReportGlobale2";
+        public static string pathReportGiornate1 { get; } = "ReportGiornate1";
+        public static string pathReportGiornate2 { get; } = "ReportGiornate2";
+
+        public static string Giorno { get; } = "Giorno";
+        public static string TotaleProduzione { get; } = "TotaleProduzione";
+        public static string TotaleBuoni { get; } = "TotaleBuoni";
+        public static string TotaleScarti { get; } = "TotaleScarti";
+        public static string TotaleTurno1 { get; } = "TotaleTurno1";
+        public static string TotaleTurno2 { get; } = "TotaleTurno2";
+        public static string TotaleTurno3 { get; } = "TotaleTurno3";
+        public static string TotaleBuoniTurno1 { get; } = "TotaleBuoniTurno1";
+        public static string TotaleBuoniTurno2 { get; } = "TotaleBuoniTurno2";
+        public static string TotaleBuoniTurno3 { get; } = "TotaleBuoniTurno3";
+        public static string TotaleScartiTurno1 { get; } = "TotaleScartiTurno1";
+        public static string TotaleScartiTurno2 { get; } = "TotaleScartiTurno2";
+        public static string TotaleScartiTurno3 { get; } = "TotaleScartiTurno3";
+
         #endregion
 
         #region enum
@@ -30,6 +58,7 @@ namespace Runner.Classes
         #endregion
 
         #region Server 2 Plc
+
         // Stringhe -- variabili contenenti il codice articolo
         public static List<string> CodiceArticoli = new List<string>()
         {
@@ -94,6 +123,7 @@ namespace Runner.Classes
             public static string Lotto { get; } = "ProduzionePezziAServer.Lotto";
             public static string Stazione { get; } = "ProduzionePezziAServer.Stazione"; //destra o sinistra
             public static string Turno { get; } = "ProduzionePezziAServer.Turno";
+            public static string IdLavorazione { get; } = "ProduzionePezziAServer.IdLavorazione";
         }
         #endregion
     }

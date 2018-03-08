@@ -18,9 +18,10 @@ namespace Runner.Classes
         public string Lotto { get; set; }
         public string CodiceArticolo { get; set; }
         public Nullable<int> TempoCiclo { get; set; }
-        public Nullable<bool> Waste { get; set; }
+        public bool Waste { get; set; }
         public System.DateTime OraLog { get; set; }
-        public Nullable<int> Stazione { get; set; }
-        public Nullable<int> Turno { get; set; }
+        public int Stazione { get; set; }
+        public int Turno { get; set; }
+        public int IdLavorazione { get; set; }
     }
 }

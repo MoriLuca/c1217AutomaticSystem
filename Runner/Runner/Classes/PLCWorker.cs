@@ -18,6 +18,7 @@ namespace Runner.Classes
         //i seguenti booleani servono per non ripetere continuamente lo stato di errore
         private bool? _heartBeatStatus;
         private bool? _EndOfTheGameStatus;
+        private bool? _CheckForWasteStatus;
         // lista utilizzata per verificare la necessita di scrivere la lista aggioranta sul plc
         List<Classes.production2plc> _ultimaListaProduzione = new List<production2plc>();
         //PLC utilizzato per l'applicazione
@@ -49,7 +50,7 @@ namespace Runner.Classes
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Errore scrittura log su file txt : "+ex.Message);
+                Console.WriteLine("Errore scrittura log su file txt : " + ex.Message);
             }
         }
 
@@ -108,12 +109,12 @@ namespace Runner.Classes
                     }
                     catch (Exception ex)
                     {
-                        if (!_heartBeatStatus.HasValue || _heartBeatStatus.Value )
+                        if (!_heartBeatStatus.HasValue || _heartBeatStatus.Value)
                         {
                             _heartBeatStatus = false;
                             ConsoleWriteOnEventError("Heartbeat Error: Eccezione in lettura PLC : " + ex.Message);
                         }
-                        
+
                     }
                     finally
                     {
@@ -197,7 +198,7 @@ namespace Runner.Classes
 
                         ricetteUguali = false;
                     }
-                    
+
                     if (!ricetteUguali)
                     {
                         _ultimaListaProduzione = listaProduzione;
@@ -259,7 +260,7 @@ namespace Runner.Classes
                     {
                         _plc.Active = true;
                         //Controllo se è attiva la variabile di fine lavoro
-                        wasTheGameEnded = (bool)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
+                        wasTheGameEnded = (bool?)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
 
 
                         if (wasTheGameEnded.Value)
@@ -271,8 +272,9 @@ namespace Runner.Classes
                                 Lotto = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Lotto),
                                 TempoCiclo = (int)(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.TempoCiclo)),
                                 Waste = false, //Forzato a falso perche il pezzo appena finito non puo essere scarto
-                                Stazione = 0,//(int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Stazione),
-                                Turno = 1//(int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Turno)
+                                Stazione = (int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Stazione),
+                                Turno = (int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Turno),
+                                IdLavorazione = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.IdLavorazione))
                             };
 
                             //salvataggio log nel database
@@ -280,17 +282,25 @@ namespace Runner.Classes
                             //Riabilito la possibilità dello scarto su plc
                             _plc.WriteVariable(Classes.PlcVariableName.EndOfTheGame, false);
                             TimeSpan durataCiclo = TimeSpan.FromSeconds((float)p.TempoCiclo / 10);
-                            string success = "Nuovo pezzo prodotto :\n";
+                            string success = "\nNuovo pezzo prodotto :\n";
                             success += $"Data e Ora : {p.OraLog}" + Environment.NewLine;
-                            success += $"Codice Articolo : {p.CodiceArticolo}"+Environment.NewLine;
+                            success += $"Codice Articolo : {p.CodiceArticolo}" + Environment.NewLine;
                             success += $"Lotto : {p.Lotto}" + Environment.NewLine;
                             success += $"TempoCiclo : {durataCiclo.ToString(@"hh\:mm\:ss")}" + Environment.NewLine;
                             success += $"Stazione : {p.Stazione}" + Environment.NewLine;
                             success += $"Turno : {p.Turno}" + Environment.NewLine;
 
                             ConsoleWriteOnEventSuccess(success);
+
+                            //Aggiornamento report su plc
+                            UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
+                            UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+                            UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+
+
+
                         }
-                        if(!_EndOfTheGameStatus.HasValue || !_EndOfTheGameStatus.HasValue)
+                        if (!_EndOfTheGameStatus.HasValue || !_EndOfTheGameStatus.Value)
                         {
                             _EndOfTheGameStatus = true;
                             ConsoleWriteOnEventSuccess("Controllo Fine Pezzo eseguito correttamente");
@@ -298,12 +308,12 @@ namespace Runner.Classes
                     }
                     catch (Exception ex)
                     {
-                        if (!_EndOfTheGameStatus.HasValue || _EndOfTheGameStatus.HasValue)
+                        if (!_EndOfTheGameStatus.HasValue || _EndOfTheGameStatus.Value)
                         {
                             _EndOfTheGameStatus = false;
                             ConsoleWriteOnEventError("End Of The Game Error : " + ex.Message);
                         }
-                        
+
                     }
                     finally
                     {
@@ -325,6 +335,9 @@ namespace Runner.Classes
             //nel database, altrimenti non verrà eseguita nessuna azione
             bool? DoWeHaveAnyWaste_Left = null;
             bool? DoWeHaveAnyWaste_Right = null;
+            int QuantitaScartiDestra;
+            int QuantitaScartiSinistra;
+
 
             while (true)
             {
@@ -337,30 +350,57 @@ namespace Runner.Classes
                         _plc.Active = true;
                         DoWeHaveAnyWaste_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteLeft);
                         DoWeHaveAnyWaste_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteRight);
+                        QuantitaScartiDestra = (int)_plc.ReadVariable(Classes.PlcVariableName.QuantitaScartiDestra);
+                        QuantitaScartiSinistra = (int)_plc.ReadVariable(Classes.PlcVariableName.QuantitaScartiSinistra);
+
                         if (DoWeHaveAnyWaste_Left.Value || DoWeHaveAnyWaste_Right.Value)
                         {
                             if (DoWeHaveAnyWaste_Left.Value)
                             {
-                                // riporto il valore del plc a false, in modo da riabilitare il comando
+                                for (int i = 0; i < QuantitaScartiSinistra; i++)
+                                {
+                                    int id = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.ContatoreLavorazioneSinistra));
+                                    // riporto il valore del plc a false, in modo da riabilitare il comando
+                                    string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Sinistra, id);
+                                    if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
+                                    else ConsoleWriteOnEventError(mex);
+                                    
+                                }
                                 _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWasteLeft, false);
-                                string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Sinistra);
-                                if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
-                                else ConsoleWriteOnEventError(mex);
                             }
-                            else 
+                            else
                             {
-                                // riporto il valore del plc a false, in modo da riabilitare il comando
+                                int id = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.ContatoreLavorazioneDestra));
+                                for (int i = 0; i < QuantitaScartiDestra; i++)
+                                {
+                                    // riporto il valore del plc a false, in modo da riabilitare il comando
+                                    string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Destra,id);
+                                    if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
+                                    else ConsoleWriteOnEventError(mex);
+                                }
                                 _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWasteRight, false);
-                                string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Destra);
-                                if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
-                                else ConsoleWriteOnEventError(mex);
                             }
 
+                            //Aggiornamento report su PLC
+                            UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
+                            UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+                            UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+
+                            if (!_CheckForWasteStatus.HasValue || !_CheckForWasteStatus.Value)
+                            {
+                                _CheckForWasteStatus = true;
+                                ConsoleWriteOnEventSuccess("Waste eseguito, ricalcolo pezzi prodotti riuscito");
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
-                        ConsoleWriteOnEventError("Check for waste Error: "+ex.Message);
+                        if (!_CheckForWasteStatus.HasValue || _CheckForWasteStatus.Value)
+                        {
+                            _CheckForWasteStatus = false;
+                            ConsoleWriteOnEventError("Check for waste Error: " + ex.Message);
+                        }
+                        
                     }
                     finally
                     {
@@ -371,8 +411,255 @@ namespace Runner.Classes
                 Thread.Sleep(2000);
             }
         }
-        #endregion
 
+        public void UpdateRportGiorni1(string stringaId)
+        {
+            lock (_comunicationLock)
+            {
+                try
+                {
+                    _plc.Active = true;
+                    int offsetOreTurno = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.Ora_Inizio_Turno_1));
+                    DateTime dayStart = DateTime.Now.Date.AddHours(offsetOreTurno);
+                    DateTime dayEnd = dayStart.AddHours(24);
+
+                    
+                    int idLavorazione = Convert.ToInt32(_plc.ReadVariable(stringaId));
+                    using (var context = new Classes.ProduzioneEntities())
+                    {
+                        //Aggiornamento report Array 7 giorni
+                        for (int i = 1; i < 8; i++)
+                        {
+                            //salto il primo ciclo, perche non devo sottrarre nessun giorno.
+                            //tutto perche l 'array sul plc parte da 1
+                            if (i > 1)
+                            {
+                                dayStart = dayStart.AddDays(-1);
+                                dayEnd = dayEnd.AddDays(-1);
+                            }
+
+
+                            int totale = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoni = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScarti = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoniTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                    && t.Turno == 1 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoniTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                    && t.Turno == 2 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoniTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                    && t.Turno == 3 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScartiTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                    && t.Turno == 1 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScartiTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                    && t.Turno == 2 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScartiTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                    && t.Turno == 3 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.Giorno, dayStart.Date.ToString("dd/M/yy"));
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleProduzione, totale);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleBuoni, totaleBuoni);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleScarti, totaleScarti);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleTurno1, totaleBuoniTurno1 + totaleScartiTurno1);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleTurno2, totaleBuoniTurno2 + totaleScartiTurno2);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleTurno3, totaleBuoniTurno3 + totaleScartiTurno3);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleBuoniTurno1, totaleBuoniTurno1);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleBuoniTurno2, totaleBuoniTurno2);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleBuoniTurno3, totaleBuoniTurno3);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleScartiTurno1, totaleScartiTurno1);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleScartiTurno2, totaleScartiTurno2);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate1 + $"[{i}]." + PlcVariableName.TotaleScartiTurno3, totaleScartiTurno3);
+
+
+                        }
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                _plc.Active = false;
+
+            }
+
+        }
+
+        public void UpdateRportGiorni2(string stringaId)
+        {
+            lock (_comunicationLock)
+            {
+                try
+                {
+
+                    DateTime dayStart = DateTime.Now.Date.AddHours(6);
+                    DateTime dayEnd = dayStart.AddHours(24);
+
+                    _plc.Active = true;
+                    int idLavorazione = Convert.ToInt32(_plc.ReadVariable(stringaId));
+                    using (var context = new Classes.ProduzioneEntities())
+                    {
+                        //Aggiornamento report Array 7 giorni
+                        for (int i = 1; i < 8; i++)
+                        {
+                            //salto il primo ciclo, perche non devo sottrarre nessun giorno.
+                            //tutto perche l 'array sul plc parte da 1
+                            if (i > 1)
+                            {
+                                dayStart = dayStart.AddDays(-1);
+                                dayEnd = dayEnd.AddDays(-1);
+                            }
+
+
+                            int totale = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoni = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScarti = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoniTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                    && t.Turno == 1 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoniTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                    && t.Turno == 2 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleBuoniTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                    && t.Turno == 3 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScartiTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                    && t.Turno == 1 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScartiTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                    && t.Turno == 2 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            int totaleScartiTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                    && t.Turno == 3 && t.OraLog > dayStart && t.OraLog < dayEnd).ToList().Count;
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.Giorno, dayStart.Date.ToString("dd/M/yy"));
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleProduzione, totale);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleBuoni, totaleBuoni);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleScarti, totaleScarti);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleTurno1, totaleBuoniTurno1 + totaleScartiTurno1);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleTurno2, totaleBuoniTurno2 + totaleScartiTurno2);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleTurno3, totaleBuoniTurno3 + totaleScartiTurno3);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleBuoniTurno1, totaleBuoniTurno1);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleBuoniTurno2, totaleBuoniTurno2);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleBuoniTurno3, totaleBuoniTurno3);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleScartiTurno1, totaleScartiTurno1);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleScartiTurno2, totaleScartiTurno2);
+                            _plc.WriteVariable(PlcVariableName.pathReportGiornate2 + $"[{i}]." + PlcVariableName.TotaleScartiTurno3, totaleScartiTurno3);
+
+
+                        }
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                _plc.Active = false;
+
+            }
+
+        }
+
+        public void UpdateRportTotale(string stringaId1, string stringaId2)
+        {
+            ReportTotale1(stringaId1);
+            ReportTotale2(stringaId2);
+        }
+
+        private void ReportTotale1(string id)
+        {
+            lock (_comunicationLock)
+            {
+                try
+                {
+                    _plc.Active = true;
+                    int idLavorazione = Convert.ToInt32(_plc.ReadVariable(id));
+
+                    using (var context = new Classes.ProduzioneEntities())
+                    {
+
+                        int tot = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione).ToList().Count;
+                        int totBuoni = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste).ToList().Count;
+                        int totScarti = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste).ToList().Count;
+                        int totBuoniTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                && t.Turno == 1).ToList().Count;
+                        int totBuoniTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                && t.Turno == 2).ToList().Count;
+                        int totBuoniTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                && t.Turno == 3).ToList().Count;
+                        int totScartiTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                && t.Turno == 1).ToList().Count;
+                        int totScartiTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                && t.Turno == 2).ToList().Count;
+                        int totScartiTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                && t.Turno == 3).ToList().Count;
+
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleProduzione, tot);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleBuoni, totBuoni);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleScarti, totScarti);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleBuoniTurno1, totBuoniTurno1);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleBuoniTurno2, totBuoniTurno2);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleBuoniTurno3, totBuoniTurno3);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleScartiTurno1, totScartiTurno1);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleScartiTurno2, totScartiTurno2);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale1 + "." + PlcVariableName.TotaleScartiTurno3, totScartiTurno3);
+
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                _plc.Active = false;
+
+            }
+        }
+
+        private void ReportTotale2(string id)
+        {
+            lock (_comunicationLock)
+            {
+                try
+                {
+                    _plc.Active = true;
+                    int idLavorazione = Convert.ToInt32(_plc.ReadVariable(id));
+
+                    using (var context = new Classes.ProduzioneEntities())
+                    {
+
+                        int tot = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione).ToList().Count;
+                        int totBuoni = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste).ToList().Count;
+                        int totScarti = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste).ToList().Count;
+                        int totBuoniTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                && t.Turno == 1).ToList().Count;
+                        int totBuoniTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                && t.Turno == 2).ToList().Count;
+                        int totBuoniTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && !t.Waste
+                                                && t.Turno == 3).ToList().Count;
+                        int totScartiTurno1 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                && t.Turno == 1).ToList().Count;
+                        int totScartiTurno2 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                && t.Turno == 2).ToList().Count;
+                        int totScartiTurno3 = context.productionLogs.Where(t => t.IdLavorazione == idLavorazione && t.Waste
+                                                && t.Turno == 3).ToList().Count;
+
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleProduzione, tot);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleBuoni, totBuoni);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleScarti, totScarti);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleBuoniTurno1, totBuoniTurno1);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleBuoniTurno2, totBuoniTurno2);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleBuoniTurno3, totBuoniTurno3);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleScartiTurno1, totScartiTurno1);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleScartiTurno2, totScartiTurno2);
+                        _plc.WriteVariable(PlcVariableName.pathReportGlobale2 + "." + PlcVariableName.TotaleScartiTurno3, totScartiTurno3);
+
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                _plc.Active = false;
+
+            }
+        }
+
+        #endregion
 
         #region async Launcher
         public void AsyncHeartBeat()
