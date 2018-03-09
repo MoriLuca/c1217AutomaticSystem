@@ -10,7 +10,8 @@ namespace Runner.Classes
     {
         public static object locker = new object();
 
-        public struct ResocontoOrdine{
+        public struct ResocontoOrdine
+        {
             public string CodiceArticolo;
             public int Produzione;
         }
@@ -92,7 +93,7 @@ namespace Runner.Classes
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Read production error : "+ ex.Message);
+                Console.WriteLine("Read production error : " + ex.Message);
                 return -1;
             }
         }
@@ -153,8 +154,8 @@ namespace Runner.Classes
 
                 using (var contex = new Classes.ProduzioneEntities())
                 {
-                    uno.CodiceArticolo = contex.productionLogs.OrderByDescending(i=>i.id).FirstOrDefault().CodiceArticolo;
-                    due.CodiceArticolo = contex.productionLogs.Where(l=>l.CodiceArticolo != uno.CodiceArticolo).OrderByDescending(i => i.id).FirstOrDefault().CodiceArticolo;
+                    uno.CodiceArticolo = contex.productionLogs.OrderByDescending(i => i.id).FirstOrDefault().CodiceArticolo;
+                    due.CodiceArticolo = contex.productionLogs.Where(l => l.CodiceArticolo != uno.CodiceArticolo).OrderByDescending(i => i.id).FirstOrDefault().CodiceArticolo;
                     uno.Produzione = ReadProduction(uno.CodiceArticolo, DateTime.Today);
                     due.Produzione = ReadProduction(due.CodiceArticolo, DateTime.Today);
                     return new ResocontoOrdine[] { uno, due };
@@ -203,28 +204,33 @@ namespace Runner.Classes
                     // assegno il valore di scarto
                     log.Waste = true;
 
-
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
-                    if (ricetta.NumeroParziale > 0)
+                    if(ricetta != null)
                     {
-                        ricetta.NumeroParziale--;
+                        if (ricetta.NumeroParziale > 0)
+                        {
+                            ricetta.NumeroParziale--;
+                        }
                     }
+                    else
+                    {
+                        message = "Error - SubRecepyNumber [Ricerca lotto da sottrarre]";
+                    }
+                    
                     contex.SaveChanges();
                     string stazione;
                     if ((int)log.Stazione == 1) stazione = "Sinistra";
                     else stazione = "Destra";
-                    message = $"Scartata la lavorazione con Lotto {log.Lotto}, Codice Articolo {log.CodiceArticolo}, lavorata dalla stazione {stazione},\n";
+                    message += $"Scartata la lavorazione con Lotto {log.Lotto}, Codice Articolo {log.CodiceArticolo}, lavorata dalla stazione {stazione},\n";
                     message += $"Alle ore {log.OraLog}, Turno {log.Turno}";
                     return message;
                 }
-
-                
             }
             catch (Exception ex)
             {
-                return( "Error - SubRecepyNumber " + ex.Message);
+                return ("Error - SubRecepyNumber " + ex.Message);
             }
-            
+
         }
     }
 }

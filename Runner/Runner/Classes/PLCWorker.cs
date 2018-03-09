@@ -364,7 +364,7 @@ namespace Runner.Classes
                                     string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Sinistra, id);
                                     if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
                                     else ConsoleWriteOnEventError(mex);
-                                    
+
                                 }
                                 _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWasteLeft, false);
                             }
@@ -374,7 +374,7 @@ namespace Runner.Classes
                                 for (int i = 0; i < QuantitaScartiDestra; i++)
                                 {
                                     // riporto il valore del plc a false, in modo da riabilitare il comando
-                                    string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Destra,id);
+                                    string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Destra, id);
                                     if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
                                     else ConsoleWriteOnEventError(mex);
                                 }
@@ -400,7 +400,7 @@ namespace Runner.Classes
                             _CheckForWasteStatus = false;
                             ConsoleWriteOnEventError("Check for waste Error: " + ex.Message);
                         }
-                        
+
                     }
                     finally
                     {
@@ -423,7 +423,7 @@ namespace Runner.Classes
                     DateTime dayStart = DateTime.Now.Date.AddHours(offsetOreTurno);
                     DateTime dayEnd = dayStart.AddHours(24);
 
-                    
+
                     int idLavorazione = Convert.ToInt32(_plc.ReadVariable(stringaId));
                     using (var context = new Classes.ProduzioneEntities())
                     {

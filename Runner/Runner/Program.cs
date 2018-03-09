@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,9 +11,8 @@ namespace Runner
     class Program
     {
         static void Main(string[] args)
-
         {
-            Console.Title = "Runner V[2.0]";
+            Console.Title = $"Runner V[{Assembly.GetExecutingAssembly().GetName().Version}]";
             using (var dbContext = new Classes.ProduzioneEntities())
             {
                 if (dbContext.Database.Exists()) Console.WriteLine("Connessione db OK");
