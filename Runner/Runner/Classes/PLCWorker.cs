@@ -12,7 +12,7 @@ namespace Runner.Classes
     public class PLCWorker
     {
 
-        Luca.Logger log = new Luca.Logger(@"\GiDi_Runner\PLCWorker\");
+        Luca.Logger _log = new Luca.Logger(@"\GiDi_Runner\PLCWorker\");
 
         #region proprietà
         private object _comunicationLock;
@@ -36,6 +36,27 @@ namespace Runner.Classes
             _plc.LocalPort = 2;
             if(!_plc.Active)
                 _plc.Active = true;
+
+            #region Aggiornamento Report Lavorazioni HMI
+            try
+            {
+                UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
+                UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+                UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                _log.WriteLog("Errore aggiornameto lavorazioni : " + ex.Message);
+            }
+            #endregion
+
+            #region Threads 
+            AsyncHeartBeat();
+            AsyncScreebaLoop();
+            AsyncCheckEndOfTheGame();
+            AsyncCheckForWaste();
+            #endregion
         }
         #endregion
 

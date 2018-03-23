@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Runner.Classes;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,8 +15,6 @@ namespace Runner
     {
         #region Object Declaration
         static Luca.Logger _log = new Luca.Logger(@"\GiDi_Runner\Main\");
-        static Classes.PLCWorker _plc = new Classes.PLCWorker();
-        #warning rimuovere il plc e le chimate di aggiornamento da qua
         #endregion
 
         #region Exit Handler
@@ -56,49 +55,49 @@ namespace Runner
 
         static void Main(string[] args)
         {
+            #region Application Exit Handler
             _handler += new EventHandler(Handler);
             SetConsoleCtrlHandler(_handler, true);
+            #endregion
 
-            //#region Console Title
-            //Console.Title = $"Runner V[{Assembly.GetExecutingAssembly().GetName().Version}]";
-            //Console.WriteLine("-- Inizio Programma Runner--\n");
-            //#endregion
+            #region Console Title
+            Console.Title = $"Runner V[{Assembly.GetExecutingAssembly().GetName().Version}]";
+            Console.WriteLine("-- Inizio Programma Runner--\n");
+            #endregion
 
-            //#region DatabaseCheck
-            //try
-            //{
-            //    using (var dbContext = new Classes.ProduzioneEntities())
-            //    {
-            //        if (dbContext.Database.Exists()) Console.WriteLine("Connessione db OK");
-            //        else Console.WriteLine("Connessione db Non presente.");
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    _log.WriteLog("Errore controllo esistenza Database : " + ex.Message);
-            //}
-            //#endregion
+            #region DatabaseCheck
+            try
+            {
+                using (var dbContext = new Classes.ProduzioneEntities())
+                {
+                    if (dbContext.Database.Exists())
+                    {
+                        Console.WriteLine("Connessione db OK");
+                    }
+                    else
+                    {
+                        string message = "Connessione db Non presente.\n";
+                        message += "Please build the database for the application from the Microsoft SQL Server Managment\n" +
+                           "or check where the SQL Server Service is ON.";
+                        Console.WriteLine(message);
+                        _log.WriteLog(message);
+                        Console.ReadLine();
+                        Environment.Exit(0);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                string message = "Error while checking for DB Presence : " + ex.Message;
+                Console.WriteLine(message);
+                _log.WriteLog(message);
+            }
+            #endregion
 
-            //#region Aggiornamento Report Lavorazioni HMI
-            //try
-            //{
-            //    _plc.UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
-            //    _plc.UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
-            //    _plc.UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
-            //}
-            //catch (Exception ex)
-            //{
-            //    Console.WriteLine(ex.Message);
-            //    _log.WriteLog("Errore aggiornameto lavorazioni : " + ex.Message);
-            //}
-            //#endregion
-
-            //#region Threads 
-            //_plc.AsyncHeartBeat();
-            //_plc.AsyncScreebaLoop();
-            //_plc.AsyncCheckEndOfTheGame();
-            //_plc.AsyncCheckForWaste();
-            //#endregion
+            #region PLC Instance
+            //The constructor will launch all the separate threads
+            PLCWorker plc = new PLCWorker();
+            #endregion
 
             while (true)
             {
