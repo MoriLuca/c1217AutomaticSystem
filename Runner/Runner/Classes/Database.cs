@@ -230,8 +230,9 @@ namespace Runner.Classes
             }
             catch (Exception ex)
             {
+                PLCWorker.ConsoleWriteOnEventError("Error - SubRecepyNumber " + ex.Message);
                 log.WriteLog("Error - SubRecepyNumber " + ex.Message);
-                return ("Error - SubRecepyNumber " + ex.Message);
+                return null;
             }
 
         }

@@ -9,7 +9,9 @@ Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "RunnerInstaller", "RunnerIn
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OmronOpener", "OmronOpener\OmronOpener.csproj", "{49B9A697-F150-4EC2-B2D8-D640315B6930}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logger", "Logger\Logger.csproj", "{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logger", "Logger\Logger.csproj", "{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Email", "Email\Email.csproj", "{0AC19CAB-C5D2-4D17-A917-14FE2B0E1DC5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +33,10 @@ Global
 		{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0AC19CAB-C5D2-4D17-A917-14FE2B0E1DC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0AC19CAB-C5D2-4D17-A917-14FE2B0E1DC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0AC19CAB-C5D2-4D17-A917-14FE2B0E1DC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0AC19CAB-C5D2-4D17-A917-14FE2B0E1DC5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

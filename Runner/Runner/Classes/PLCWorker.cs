@@ -13,10 +13,12 @@ namespace Runner.Classes
     {
 
         Luca.Logger _log = new Luca.Logger(@"\GiDi_Runner\PLCWorker\");
+        static Luca.EmailConfiguration conf = new Luca.EmailConfiguration();
+        static MimeKit.MimeMessage ma = new MimeKit.MimeMessage();
 
         #region proprietà
         private object _comunicationLock;
-        private string _newLine = new string('*', Console.WindowWidth);
+        private static string _newLine = new string('*', Console.WindowWidth);
 
         //i seguenti booleani servono per non ripetere continuamente lo stato di errore
         private bool _heartBeatStatus;
@@ -36,6 +38,12 @@ namespace Runner.Classes
             _comunicationLock = new object();
             _plc.PeerAddress = "10.0.50.121";
             _plc.LocalPort = 2;
+
+            conf.SmtpServer = "smtp.gmail.com";
+            conf.SmtpPort = 465;
+            conf.SmtpUsername = "wmori.luca@gmail.com";
+            conf.SmtpPassword = "plOK12@#@#";
+
             if (!_plc.Active)
                 _plc.Active = true;
 
@@ -295,11 +303,53 @@ namespace Runner.Classes
                         UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
                         UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
 
-                    }
-                    if (!_EndOfTheGameStatus.HasValue || !_EndOfTheGameStatus.Value)
-                    {
-                        _EndOfTheGameStatus = true;
-                        ConsoleWriteOnEventSuccess("Controllo Fine Pezzo eseguito correttamente");
+                        #region sendEmail
+                        try
+                        {
+                            Luca.EmailService s = new Luca.EmailService(conf);
+                            List<Luca.EmailAddress> l = new List<Luca.EmailAddress>()
+                        {
+                            new Luca.EmailAddress()
+                            {
+                                Name = "Robot Poliplast",
+                                Address = "Robottino@Poliplast.com"
+                            }
+                        };
+                            List<Luca.EmailAddress> lt = new List<Luca.EmailAddress>()
+                        {
+                            new Luca.EmailAddress()
+                            {
+                                Name = "Luca Mori",
+                                Address = "luca.mori@gidiautomazione.it"
+                            }
+                        };
+
+                            Luca.EmailMessage m = new Luca.EmailMessage()
+                            {
+                                Subject = "NuovoPezzoProdotto",
+                                Content = "<h1>Prodotto nuovo Pezzo</h1>" +
+                                    $"<p>Orario : {p.OraLog}</p>" +
+                                    $"<p>Stazione : {p.Stazione}</p>" +
+                                    $"<p>TempoLavorazione : {p.TempoCiclo}</p>",
+                                FromAddresses = l,
+                                ToAddresses = lt
+                            };
+
+                            s.Send(m);
+                        }
+                        catch (Exception ex)
+                        {
+                            _log.WriteLog("Errore invio email Produzione : "+ex.Message);
+                        }
+
+                        #endregion
+
+
+                        if (!_EndOfTheGameStatus.HasValue || !_EndOfTheGameStatus.Value)
+                        {
+                            _EndOfTheGameStatus = true;
+                            ConsoleWriteOnEventSuccess("Controllo Fine Pezzo eseguito correttamente");
+                        }
                     }
                 }
                 catch (Exception ex)

@@ -13,6 +13,7 @@ namespace Runner
 {
     class Program
     {
+
         #region Object Declaration
         static Luca.Logger _log = new Luca.Logger(@"\GiDi_Runner\Main\");
         #endregion
