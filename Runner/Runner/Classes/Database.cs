@@ -9,6 +9,7 @@ namespace Runner.Classes
     public static class Database
     {
         public static object locker = new object();
+        static Luca.Logger log = new Luca.Logger(@"\GiDi_Runner\Database\");
 
         public struct ResocontoOrdine
         {
@@ -46,6 +47,7 @@ namespace Runner.Classes
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                log.WriteLog("Error Writing log for new Production. Insert row on Production error : "+ex);
             }
         }
 
@@ -174,13 +176,15 @@ namespace Runner.Classes
                 using (var contex = new Classes.ProduzioneEntities())
                 {
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == nomeLotto).FirstOrDefault();
+                    if (ricetta == null) throw new Exception("La ricetta Lavorata non è salvata nel Database. Impossibile Aggiornare la produzione.");
                     ricetta.NumeroParziale++;
                     contex.SaveChanges();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine();
+                PLCWorker.ConsoleWriteOnEventError("Error on adding 1 to a recepy - "+ex);
+                log.WriteLog("Error on adding 1 to a recepy - " + ex);
             }
         }
         /// <summary>
@@ -202,21 +206,19 @@ namespace Runner.Classes
                     Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id)
                         .Where(l => l.Stazione == (int)stazioneSaldatrice && l.Waste == false && l.IdLavorazione == idLavorazione).FirstOrDefault();
                     // assegno il valore di scarto
+                    if (log == null) throw new Exception("No Log was founded to apply waste check.");
                     log.Waste = true;
+                    contex.SaveChanges();
 
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
-                    if(ricetta != null)
+                    if (ricetta == null) throw new Exception("No recepy was founded for sub a waste.");
+                    else
                     {
                         if (ricetta.NumeroParziale > 0)
                         {
                             ricetta.NumeroParziale--;
                         }
                     }
-                    else
-                    {
-                        message = "Error - SubRecepyNumber [Ricerca lotto da sottrarre]";
-                    }
-                    
                     contex.SaveChanges();
                     string stazione;
                     if ((int)log.Stazione == 1) stazione = "Sinistra";
@@ -228,6 +230,7 @@ namespace Runner.Classes
             }
             catch (Exception ex)
             {
+                log.WriteLog("Error - SubRecepyNumber " + ex.Message);
                 return ("Error - SubRecepyNumber " + ex.Message);
             }
 
