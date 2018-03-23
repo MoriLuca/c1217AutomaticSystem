@@ -11,6 +11,9 @@ namespace Runner.Classes
 {
     public class PLCWorker
     {
+
+        Luca.Logger log = new Luca.Logger(@"\GiDi_Runner\PLCWorker\");
+
         #region proprietà
         private object _comunicationLock;
         private string _newLine = "******************************************************************************";
@@ -31,28 +34,12 @@ namespace Runner.Classes
             _comunicationLock = new object();
             _plc.PeerAddress = "10.0.50.121";
             _plc.LocalPort = 2;
+            if(!_plc.Active)
+                _plc.Active = true;
         }
         #endregion
 
         #region metodi
-
-        private void writeEventOnPaper(string s)
-        {
-            string mex = DateTime.Now + " - " + s + Environment.NewLine;
-            _writeOnPaper += mex;
-            try
-            {
-                string folderName = DateTime.Now.Date.ToString("dd_MM_yy");
-                if (!Directory.Exists($"Log/{folderName}")) Directory.CreateDirectory($"Log/{folderName}");
-                if (!File.Exists($"Log/{folderName}/report.txt")) File.Create($"Log/{folderName}/report.txt").Close();
-                File.AppendAllText($"Log/{folderName}/report.txt", mex);
-                _writeOnPaper = "";
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Errore scrittura log su file txt : " + ex.Message);
-            }
-        }
 
         private void ConsoleWriteOnEventSuccess(string s)
         {
@@ -63,7 +50,6 @@ namespace Runner.Classes
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine(_newLine);
             Console.ForegroundColor = ConsoleColor.White;
-            writeEventOnPaper(s);
         }
 
         private void ConsoleWriteOnEventError(string s)
@@ -75,7 +61,6 @@ namespace Runner.Classes
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(_newLine + Environment.NewLine);
             Console.ForegroundColor = ConsoleColor.White;
-            writeEventOnPaper(s);
         }
 
         ///<summary>Test Connessione con plc </summary>
@@ -93,11 +78,18 @@ namespace Runner.Classes
                 {
                     try
                     {
-                        _plc.Active = true;
+
+                        if (!_plc.Active) _plc.Active = true;
                         uselessBool = (bool?)_plc.ReadVariable("HandShake");
                         if (!uselessBool.Value)
                         {
                             _plc.WriteVariable("HandShake", true);
+
+                            //scrittura ore su plc
+                            _plc.WriteVariable(PlcVariableName.NuovaOra, (ushort)DateTime.Now.Hour);
+                            _plc.WriteVariable(PlcVariableName.NuovoMinuto, (ushort)DateTime.Now.Minute);
+                            _plc.WriteVariable(PlcVariableName.NuoviSecondi, (ushort)DateTime.Now.Second);
+
                             //controllo se lo stato è differente dall'ultima volta
                             if (!_heartBeatStatus.HasValue || !_heartBeatStatus.Value)
                             {
@@ -115,10 +107,6 @@ namespace Runner.Classes
                             ConsoleWriteOnEventError("Heartbeat Error: Eccezione in lettura PLC : " + ex.Message);
                         }
 
-                    }
-                    finally
-                    {
-                        _plc.Active = false;
                     }
                 }
                 // tempo arbitrario per test di connessione
@@ -138,7 +126,6 @@ namespace Runner.Classes
                     try
                     {
                         Random random = new Random();
-                        _plc.Active = true;
 
                         for (int i = 0; i < 8; i++)
                         {
@@ -155,10 +142,6 @@ namespace Runner.Classes
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex.Message);
-                    }
-                    finally
-                    {
-                        _plc.Active = false;
                     }
                     watch.Stop();
                     Console.WriteLine(watch.ElapsedMilliseconds);
@@ -180,7 +163,11 @@ namespace Runner.Classes
                 {
                     //lettura ricette da database
                     List<Classes.production2plc> listaProduzione = Classes.Database.ReadRecepies();
-                    if (listaProduzione.Count != _ultimaListaProduzione.Count) _ultimaListaProduzione = new List<production2plc>(listaProduzione.Count);
+                    if (listaProduzione != null)
+                    {
+                        if (listaProduzione.Count != _ultimaListaProduzione.Count) _ultimaListaProduzione = new List<production2plc>(listaProduzione.Count);
+
+                    }
                     bool ricetteUguali = true;
                     try
                     {
@@ -193,9 +180,9 @@ namespace Runner.Classes
                             }
                         }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-
+                        ConsoleWriteOnEventError("Lista Produzione Vuota - "+ex.Message);
                         ricetteUguali = false;
                     }
 
@@ -207,7 +194,6 @@ namespace Runner.Classes
 
                         try
                         {
-                            _plc.Active = true;
 
                             for (int i = 0; i < listaProduzione.Count; i++)
                             {
@@ -227,10 +213,6 @@ namespace Runner.Classes
                         {
                             watch.Stop();
                             ConsoleWriteOnEventError("Screeba Error [Srcittura ricette su PLC] : " + ex.Message);
-                        }
-                        finally
-                        {
-                            _plc.Active = false;
                         }
                     }
                 }
@@ -258,7 +240,6 @@ namespace Runner.Classes
                     try
 
                     {
-                        _plc.Active = true;
                         //Controllo se è attiva la variabile di fine lavoro
                         wasTheGameEnded = (bool?)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
 
@@ -315,10 +296,6 @@ namespace Runner.Classes
                         }
 
                     }
-                    finally
-                    {
-                        _plc.Active = false;
-                    }
                 }
 
                 Thread.Sleep(2000);
@@ -347,7 +324,6 @@ namespace Runner.Classes
                 {
                     try
                     {
-                        _plc.Active = true;
                         DoWeHaveAnyWaste_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteLeft);
                         DoWeHaveAnyWaste_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteRight);
                         QuantitaScartiDestra = (int)_plc.ReadVariable(Classes.PlcVariableName.QuantitaScartiDestra);
@@ -402,10 +378,6 @@ namespace Runner.Classes
                         }
 
                     }
-                    finally
-                    {
-                        _plc.Active = false;
-                    }
                 }
 
                 Thread.Sleep(2000);
@@ -418,7 +390,6 @@ namespace Runner.Classes
             {
                 try
                 {
-                    _plc.Active = true;
                     int offsetOreTurno = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.Ora_Inizio_Turno_1));
                     DateTime dayStart = DateTime.Now.Date.AddHours(offsetOreTurno);
                     DateTime dayEnd = dayStart.AddHours(24);
@@ -477,7 +448,6 @@ namespace Runner.Classes
                 {
                     Console.WriteLine(ex.Message);
                 }
-                _plc.Active = false;
 
             }
 
@@ -493,7 +463,6 @@ namespace Runner.Classes
                     DateTime dayStart = DateTime.Now.Date.AddHours(6);
                     DateTime dayEnd = dayStart.AddHours(24);
 
-                    _plc.Active = true;
                     int idLavorazione = Convert.ToInt32(_plc.ReadVariable(stringaId));
                     using (var context = new Classes.ProduzioneEntities())
                     {
@@ -547,7 +516,6 @@ namespace Runner.Classes
                 {
                     Console.WriteLine(ex.Message);
                 }
-                _plc.Active = false;
 
             }
 
@@ -565,7 +533,6 @@ namespace Runner.Classes
             {
                 try
                 {
-                    _plc.Active = true;
                     int idLavorazione = Convert.ToInt32(_plc.ReadVariable(id));
 
                     using (var context = new Classes.ProduzioneEntities())
@@ -604,8 +571,6 @@ namespace Runner.Classes
                 {
                     Console.WriteLine(ex.Message);
                 }
-                _plc.Active = false;
-
             }
         }
 
@@ -615,7 +580,6 @@ namespace Runner.Classes
             {
                 try
                 {
-                    _plc.Active = true;
                     int idLavorazione = Convert.ToInt32(_plc.ReadVariable(id));
 
                     using (var context = new Classes.ProduzioneEntities())
@@ -654,7 +618,6 @@ namespace Runner.Classes
                 {
                     Console.WriteLine(ex.Message);
                 }
-                _plc.Active = false;
 
             }
         }

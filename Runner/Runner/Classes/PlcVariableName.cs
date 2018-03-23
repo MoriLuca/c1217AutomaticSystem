@@ -22,6 +22,10 @@ namespace Runner.Classes
         public static string QuantitaScartiDestra { get; } = "QuantitaScartiDx";
         public static string QuantitaScartiSinistra { get; } = "QuantitaScartiSx";
 
+        public static string NuovaOra { get; } = "NuovaOra";
+        public static string NuovoMinuto { get; } = "NuovoMinuto";
+        public static string NuoviSecondi { get; } = "NuoviSecondi";
+
         public static string ContatoreLavorazioneDestra { get; } = "ContatoreLavorazioneDx";
         public static string ContatoreLavorazioneSinistra { get; } = "ContatoreLavorazioneSx";
 

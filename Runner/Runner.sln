@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Runner", "Runner\Runner.csp
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "RunnerInstaller", "RunnerInstaller\RunnerInstaller.vdproj", "{BABFD014-6E31-4954-9DEE-3399A3BBC3A8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OmronOpener", "OmronOpener\OmronOpener.csproj", "{49B9A697-F150-4EC2-B2D8-D640315B6930}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logger", "Logger\Logger.csproj", "{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +23,14 @@ Global
 		{6D0A1C3B-D9DD-40EA-8CB9-28FB78459AC9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BABFD014-6E31-4954-9DEE-3399A3BBC3A8}.Debug|Any CPU.ActiveCfg = Debug
 		{BABFD014-6E31-4954-9DEE-3399A3BBC3A8}.Release|Any CPU.ActiveCfg = Release
+		{49B9A697-F150-4EC2-B2D8-D640315B6930}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49B9A697-F150-4EC2-B2D8-D640315B6930}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49B9A697-F150-4EC2-B2D8-D640315B6930}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49B9A697-F150-4EC2-B2D8-D640315B6930}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDDC7A30-030A-4CC4-9EAB-377B9D340C3B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
