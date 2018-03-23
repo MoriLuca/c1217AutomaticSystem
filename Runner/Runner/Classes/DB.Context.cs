@@ -18,6 +18,7 @@ namespace Runner.Classes
         public ProduzioneEntities()
             : base("name=ProduzioneEntities")
         {
+            Database.CreateIfNotExists();
         }
     
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
