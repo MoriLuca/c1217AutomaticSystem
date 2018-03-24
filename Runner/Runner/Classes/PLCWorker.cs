@@ -22,8 +22,9 @@ namespace Runner.Classes
 
         //i seguenti booleani servono per non ripetere continuamente lo stato di errore
         private bool _heartBeatStatus;
-        private bool? _EndOfTheGameStatus;
+        private bool _EndOfTheGameStatus;
         private bool? _CheckForWasteStatus;
+        private bool _statoConnessione = true;
 
         // lista utilizzata per verificare la necessita di scrivere la lista aggioranta sul plc
         List<Classes.production2plc> _ultimaListaProduzione = new List<production2plc>();
@@ -63,10 +64,17 @@ namespace Runner.Classes
 
             #region Threads 
             AsyncHeartBeat();
-            AsyncScreebaLoop();
-            AsyncCheckEndOfTheGame();
-            AsyncCheckForWaste();
             #endregion
+        }
+        public PLCWorker(bool test)
+        {
+            _comunicationLock = new object();
+            conf.SmtpServer = "smtp.gmail.com";
+            conf.SmtpPort = 465;
+            conf.SmtpUsername = "wmori.luca@gmail.com";
+            conf.SmtpPassword = "plOK12@#@#";
+            //AsyncHeartBeat();
+            CheckEndOfTheGame();
         }
         #endregion
 
@@ -77,6 +85,17 @@ namespace Runner.Classes
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine(_newLine);
             Console.ForegroundColor = ConsoleColor.DarkGreen;
+            Console.WriteLine(s);
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine(_newLine);
+            Console.ForegroundColor = ConsoleColor.White;
+        }
+
+        public static void ConsoleWriteOnEventWarning(string s)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine(_newLine);
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.WriteLine(s);
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.WriteLine(_newLine);
@@ -98,216 +117,223 @@ namespace Runner.Classes
         public void HeartBeat()
         {
 
-            bool? uselessBool = null;
-
             while (true)
             {
-
-                //comunicazione con plc e lettura variabile di scambio segnale
-                lock (_comunicationLock)
-                {
-                    try
-                    {
-
-                        if (!_plc.Active) _plc.Active = true;
-                        uselessBool = (bool?)_plc.ReadVariable("HandShake");
-                        if (!uselessBool.Value)
-                        {
-                            _plc.WriteVariable("HandShake", true);
-
-                            //scrittura ore su plc
-                            _plc.WriteVariable(PlcVariableName.NuovaOra, (ushort)DateTime.Now.Hour);
-                            _plc.WriteVariable(PlcVariableName.NuovoMinuto, (ushort)DateTime.Now.Minute);
-                            _plc.WriteVariable(PlcVariableName.NuoviSecondi, (ushort)DateTime.Now.Second);
-
-                            //controllo se lo stato è differente dall'ultima volta
-                            if (!_heartBeatStatus)
-                            {
-                                _heartBeatStatus = true;
-                                string mex = "Heartbeat: Stabilita Comunicazione con PLC OK! - PLC Address : " + _plc.PeerAddress;
-                                ConsoleWriteOnEventSuccess(mex);
-                                _log.WriteLog(mex);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        string mex = "Heartbeat Error: Eccezione in lettura PLC : " + ex.Message;
-                        ConsoleWriteOnEventError(mex);
-                        _log.WriteLog(mex);
-                        if (_heartBeatStatus) _heartBeatStatus = false;
-                    }
-                }
                 // tempo arbitrario per test di connessione
                 Thread.Sleep(5000);
-            }
 
-        }
+                //comunicazione con plc e lettura variabile di scambio segnale
 
-        /// <summary>
-        /// La funzione screeba scrive le ricette lette dal database, sul PLC
-        /// </summary>
-        public void Screeba()
-        {
-            while (true)
-            {
-                Thread.Sleep(5000);
+                if (!_plc.Active) _plc.Active = true;
 
-                lock (_comunicationLock)
+                //Imposto il bit a true, cosi sono sicuro che per andare false la lettura
+                //è avvenuta ed è stato il PLC a riportarla a false
+                bool heartBIT = true;
+                #region Lettura Heartbeat
+                try
                 {
-                    //lettura ricette da database
-                    bool ricetteUguali = true;
-                    List<Classes.production2plc> listaProduzione = Classes.Database.ReadRecepies();
-                    if (listaProduzione == null || listaProduzione.Count < 1)
+                    lock (_comunicationLock)
                     {
-                        string mex = "The production list, retrived from the database, is null or contain less than 1 items";
-                        ConsoleWriteOnEventError(mex);
-                        _log.WriteLog(mex);
-                        continue;
-
-                    }
-                    else
-                    {
-                        if (listaProduzione.Count != _ultimaListaProduzione.Count)
-                        {
-                            _ultimaListaProduzione = new List<production2plc>(listaProduzione.Count);
-                            ricetteUguali = false;
-                        }
-                    }
-
-                    //Se la lista ha lo stesso numero di elementi, controllo se sono
-                    //uguali
-                    if (ricetteUguali)
-                    {
-                        try
-                        {
-                            for (int i = 0; i < listaProduzione.Count; i++)
-                            {
-                                if (!listaProduzione[i].IsEqualTo(_ultimaListaProduzione[i]))
-                                {
-                                    ricetteUguali = false;
-                                    break;
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            string mex = "Error on Verifying if the recepies are equals to the old ones - " + ex.Message;
-                            ConsoleWriteOnEventError(mex);
-                            _log.WriteLog(mex);
-                            //In caso di erroe di questo tipo, procedo alla riscrittura delle nuove ricette.
-                            ricetteUguali = false;
-                        }
-                    }
-
-                    //se le ricette contengono delle differenze, avviene l'aggiornamento
-                    if (!ricetteUguali)
-                    {
-
-                        var watch = System.Diagnostics.Stopwatch.StartNew();
-
-                        try
-                        {
-                            if (!_plc.Active) _plc.Active = true;
-                            for (int i = 0; i < listaProduzione.Count; i++)
-                            {
-                                if (listaProduzione[i].Lotto != null)
-                                {
-                                    _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[i], (Int16)listaProduzione[i].NumeroPezziTotali);
-                                    _plc.WriteVariable(Classes.PlcVariableName.NumeroPezziAttuale[i], (Int16)listaProduzione[i].NumeroParziale);
-                                    _plc.WriteVariable(Classes.PlcVariableName.Lotti[i], listaProduzione[i].Lotto);
-                                    _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[i], listaProduzione[i].CodiceArticolo);
-                                }
-
-                            }
-                            watch.Stop();
-                            //Aggiorno le ultime ricette con quelle correnti per il prossimo check
-                            _ultimaListaProduzione = listaProduzione;
-                            ConsoleWriteOnEventSuccess("Scrittura ricette aggiornate avvenuta in : " + watch.ElapsedMilliseconds + " ms");
-                        }
-                        catch (Exception ex)
-                        {
-                            watch.Stop();
-                            string mex = "Screeba Error [Srcittura ricette su PLC] : " + ex.Message;
-                            ConsoleWriteOnEventError(mex);
-                            _log.WriteLog(mex);
-                        }
+                        heartBIT = (bool)_plc.ReadVariable(PlcVariableName.HandShake);
                     }
                 }
+                catch (Exception ex)
+                {
+                    if (_statoConnessione)
+                    {
+                        string mex = $"Lost Connection. Error reading Handshake varaible {PlcVariableName.HandShake} :" + ex.Message;
+                        ConsoleWriteOnEventError(mex);
+                        _log.WriteLog(mex);
+                        _statoConnessione = false;
+                    }
+                    continue;
+                }
+                #endregion
+
+                //Se la lettura dal plc è ancora di un bool true, il plc non ha ancora aggiornato il valore
+                //attendo e ripeto l'operazione
+                if (heartBIT) continue;
+                //Se il PLC ha riportato lo stato a false
+                else
+                {
+                    #region Verifica Stato Connessione
+                    //Se lo stato della connessione era impostato su false, vuol dire che la connessione
+                    //è stata appena ristabilita
+                    if (!_statoConnessione)
+                    {
+                        //Aggiorno il valore per sapere il prossimo ciclo che la connessione era gia attiva
+                        _statoConnessione = true;
+                        //Aggiornamento ore su plc, solo sulla riattivazione della connessione
+                        //utilizzo lo stesso lock per impostare a true il bit di handshake
+                        try
+                        {
+                            lock (_comunicationLock)
+                            {
+                                _plc.WriteVariable(PlcVariableName.NuovaOra, (ushort)DateTime.Now.Hour);
+                                _plc.WriteVariable(PlcVariableName.NuovoMinuto, (ushort)DateTime.Now.Minute);
+                                _plc.WriteVariable(PlcVariableName.NuoviSecondi, (ushort)DateTime.Now.Second);
+                                _plc.WriteVariable(PlcVariableName.HandShake, true);
+                            }
+                            //report connessione ristabilita
+                            string mex = "Heartbeat: Stabilita Comunicazione con PLC OK! - PLC Address : " + _plc.PeerAddress;
+                            ConsoleWriteOnEventSuccess(mex);
+                            _log.WriteLog(mex);
+                        }
+                        catch (Exception ex)
+                        {
+                            string mex = "Riconnessione a PLC : Errore scrittura heartbeat/aggiornamento ore " + ex.Message;
+                            ConsoleWriteOnEventError(mex);
+                            _log.WriteLog(mex);
+                            if (_heartBeatStatus) _heartBeatStatus = false;
+                        }
+
+                    }
+                    #endregion
+
+                    //HeartBeat letto, di seguito il resto delle azioni da compiere
+                    //quando la comunicazione è ok
+
+                    //Controllo se ci sono pezzi completati oppure se ci sono scarti da aggiornare
+                    if (CheckEndOfTheGame() || CheckForWaste())
+                    {
+                        //Aggiornamento report su plc
+                        UpdateRportGiorni1(PlcVariableName.ContatoreLavorazioneDestra);
+                        UpdateRportGiorni2(PlcVariableName.ContatoreLavorazioneSinistra);
+                        UpdateRportTotale(PlcVariableName.ContatoreLavorazioneDestra, PlcVariableName.ContatoreLavorazioneSinistra);
+                    }
+                    //Verifico se ci sono aggiornamenti nelle ricette sul database
+#warning attivare recepy qui sotto    
+                    //CheckRecepyChange();
+
+                }
+
             }
         }
 
+
         /// <summary>
-        /// Check fine pezzo per salvataggio db
+        /// Check if there are any new items to log     
         /// </summary>
-        public void CheckEndOfTheGame()
+        /// <returns>return a bool where there was or not any item to save</returns>
+        public bool CheckEndOfTheGame()
         {
             //Se viene rilevata la presenza di fine lavorazione, viene salvata
             //nel database, altrimenti non verrà eseguita nessuna azione
 
-            bool? wasTheGameEnded = null;
-
-            while (true)
+            bool wasTheGameEnded = false;
+            //comunicazione con plc e lettura variabile di scambio segnale
+            #region Lettura bit fine lavorazione
+            try
             {
-                Thread.Sleep(5000);
-                //comunicazione con plc e lettura variabile di scambio segnale
+                //Controllo se è attiva la variabile di fine lavoro
+                lock (_comunicationLock)
+                {
+                    if (!_plc.Active) _plc.Active = true;
+                    wasTheGameEnded = (bool)_plc.ReadVariable(PlcVariableName.EndOfTheGame);
+                }
+            }
+            catch (Exception ex)
+            {
+                string mex = $"CheckEndOfTheGame - Error reading varaible {PlcVariableName.EndOfTheGame} :" + ex.Message;
+                ConsoleWriteOnEventError(mex);
+                _log.WriteLog(mex);
+            }
+            #endregion
 
+            //Se non c'è nessuna lavorazione finita, return
+            if (!wasTheGameEnded) return false;
+            //Altrimenti procedo alla lettura del pezzo finito
+            else
+            {
+                productionLog p = new productionLog();
+                string success = "";
+                #region Lettura pezzo prodotto
                 try
                 {
-                    //Controllo se è attiva la variabile di fine lavoro
                     lock (_comunicationLock)
                     {
-                        if (!_plc.Active) _plc.Active = true;
-                        wasTheGameEnded = (bool?)_plc.ReadVariable(Classes.PlcVariableName.EndOfTheGame);
+                        //Riabilito la possibilità dello scarto su plc
+                        _plc.WriteVariable(Classes.PlcVariableName.EndOfTheGame, false);
+
+
+                        p = new productionLog()
+                        {
+                            OraLog = DateTime.Now,
+                            CodiceArticolo = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.CodiceArticolo),
+                            Lotto = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Lotto),
+                            TempoCiclo = (int)(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.TempoCiclo)),
+                            Waste = false, //Forzato a falso perche il pezzo appena finito non puo essere scarto
+                            Stazione = (int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Stazione),
+                            Turno = (int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Turno),
+                            IdLavorazione = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.IdLavorazione))
+                        };
+
+                        ////Debug test item
+                        //p = new productionLog()
+                        //{
+                        //    OraLog = DateTime.Now,
+                        //    CodiceArticolo = 100.18109.ToString(),
+                        //    Lotto = "DX",
+                        //    TempoCiclo = 490,
+                        //    Waste = false, //Forzato a falso perche il pezzo appena finito non puo essere scarto
+                        //    Stazione = 0,
+                        //    Turno = 1,
+                        //    IdLavorazione = 4
+                        //};
                     }
-                    if (!wasTheGameEnded.Value) continue;
-                    if (wasTheGameEnded.Value)
-                    {
-                        productionLog p;
-                        lock (_comunicationLock)
-                        {
-                            p = new productionLog()
-                            {
-                                OraLog = DateTime.Now,
-                                CodiceArticolo = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.CodiceArticolo),
-                                Lotto = (string)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Lotto),
-                                TempoCiclo = (int)(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.TempoCiclo)),
-                                Waste = false, //Forzato a falso perche il pezzo appena finito non puo essere scarto
-                                Stazione = (int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Stazione),
-                                Turno = (int)_plc.ReadVariable(Classes.PlcVariableName.DataToLog.Turno),
-                                IdLavorazione = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.DataToLog.IdLavorazione))
-                            };
-                        }
+                }
+                catch (Exception ex)
+                {
+                    string mex = $"Errore lettura pezzo prodotto :" + ex.Message;
+                    ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+                }
+                #endregion
 
-                        //salvataggio log nel database
-                        Classes.Database.WriteLog(p);
-                        lock (_comunicationLock)
-                        {
-                            //Riabilito la possibilità dello scarto su plc
-                            _plc.WriteVariable(Classes.PlcVariableName.EndOfTheGame, false);
-                        }
 
-                        TimeSpan durataCiclo = TimeSpan.FromSeconds((float)p.TempoCiclo / 10);
-                        string success = "\nNuovo pezzo prodotto :\n";
-                        success += $"Data e Ora : {p.OraLog}" + Environment.NewLine;
-                        success += $"Codice Articolo : {p.CodiceArticolo}" + Environment.NewLine;
-                        success += $"Lotto : {p.Lotto}" + Environment.NewLine;
-                        success += $"TempoCiclo : {durataCiclo.ToString(@"hh\:mm\:ss")}" + Environment.NewLine;
-                        success += $"Stazione : {p.Stazione}" + Environment.NewLine;
-                        success += $"Turno : {p.Turno}" + Environment.NewLine;
+                #region Salvataggio database
+                //salvataggio log nel database
+                if (Database.WriteLog(p) == Database.SavingNewLogResult.Errore)
+                {
+                    ConsoleWriteOnEventError("Errore salvataggio Nuovo pezzo.");
+                    _log.WriteLog("Errore salvataggio Nuovo pezzo.");
+                    return false;
+                }
+                #endregion
 
-                        ConsoleWriteOnEventSuccess(success);
 
-                        //Aggiornamento report su plc
-                        UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
-                        UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
-                        UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
 
-                        #region sendEmail
-                        try
-                        {
-                            Luca.EmailService s = new Luca.EmailService(conf);
-                            List<Luca.EmailAddress> l = new List<Luca.EmailAddress>()
+                #region Creazione stringa resoconto lavorazione
+                try
+                {
+                    TimeSpan durataCiclo = TimeSpan.FromSeconds((float)p.TempoCiclo / 10);
+                    success += "\nNuovo pezzo prodotto :\n";
+                    success += $"Data e Ora : {p.OraLog}" + Environment.NewLine;
+                    success += $"Codice Articolo : {p.CodiceArticolo}" + Environment.NewLine;
+                    success += $"Lotto : {p.Lotto}" + Environment.NewLine;
+                    success += $"TempoCiclo : {durataCiclo.ToString(@"hh\:mm\:ss")}" + Environment.NewLine;
+                    success += $"Stazione : {p.Stazione}" + Environment.NewLine;
+                    success += $"Turno : {p.Turno}" + Environment.NewLine;
+
+                }
+                catch (Exception ex)
+                {
+                    string mex = $"Errore composizione Stringa per display su lavorazione eseguita :" + ex.Message;
+                    ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+                }
+                #endregion
+
+                ConsoleWriteOnEventSuccess(success);
+
+
+                #endregion
+
+                #region sendEmail
+                try
+                {
+                    Luca.EmailService s = new Luca.EmailService(conf);
+                    List<Luca.EmailAddress> l = new List<Luca.EmailAddress>()
                         {
                             new Luca.EmailAddress()
                             {
@@ -315,7 +341,7 @@ namespace Runner.Classes
                                 Address = "Robottino@Poliplast.com"
                             }
                         };
-                            List<Luca.EmailAddress> lt = new List<Luca.EmailAddress>()
+                    List<Luca.EmailAddress> lt = new List<Luca.EmailAddress>()
                         {
                             new Luca.EmailAddress()
                             {
@@ -324,137 +350,324 @@ namespace Runner.Classes
                             }
                         };
 
-                            Luca.EmailMessage m = new Luca.EmailMessage()
-                            {
-                                Subject = "NuovoPezzoProdotto",
-                                Content = "<h1>Prodotto nuovo Pezzo</h1>" +
-                                    $"<p>Orario : {p.OraLog}</p>" +
-                                    $"<p>Stazione : {p.Stazione}</p>" +
-                                    $"<p>TempoLavorazione : {p.TempoCiclo}</p>",
-                                FromAddresses = l,
-                                ToAddresses = lt
-                            };
+                    Luca.EmailMessage m = new Luca.EmailMessage()
+                    {
+                        Subject = "NuovoPezzoProdotto",
+                        Content = "<h1>Prodotto nuovo Pezzo</h1>" +
+                            $"<p>Orario : {p.OraLog}</p>" +
+                            $"<p>Stazione : {p.Stazione}</p>" +
+                            $"<p>TempoLavorazione : {p.TempoCiclo}</p>",
+                        FromAddresses = l,
+                        ToAddresses = lt
+                    };
 
-                            s.Send(m);
-                        }
-                        catch (Exception ex)
-                        {
-                            _log.WriteLog("Errore invio email Produzione : "+ex.Message);
-                        }
-
-                        #endregion
-
-
-                        if (!_EndOfTheGameStatus.HasValue || !_EndOfTheGameStatus.Value)
-                        {
-                            _EndOfTheGameStatus = true;
-                            ConsoleWriteOnEventSuccess("Controllo Fine Pezzo eseguito correttamente");
-                        }
-                    }
+                    s.Send(m);
                 }
                 catch (Exception ex)
                 {
-                    if (!_EndOfTheGameStatus.HasValue || _EndOfTheGameStatus.Value)
-                    {
-                        _EndOfTheGameStatus = false;
-                        ConsoleWriteOnEventError("End Of The Game Error : " + ex.Message);
-                    }
-
-
+                    _log.WriteLog("Errore invio email Produzione : " + ex.Message);
                 }
-            }
 
+                #endregion
+
+                ConsoleWriteOnEventSuccess("Controllo Fine Pezzo eseguito correttamente");
+                return true;
+
+            }
         }
 
         /// <summary>
         /// Controllo per richiesta Scarti
         /// </summary>
-        public void CheckForWaste()
+        public bool CheckForWaste()
         {
             //Se viene rilevata la presenza di fine lavorazione, viene salvata
             //nel database, altrimenti non verrà eseguita nessuna azione
-            bool? DoWeHaveAnyWaste_Left = null;
-            bool? DoWeHaveAnyWaste_Right = null;
-            int QuantitaScartiDestra;
-            int QuantitaScartiSinistra;
+            bool DoWeHaveAnyWaste_Left = false;
+            bool DoWeHaveAnyWaste_Right = false;
+            int QuantitaScartiDestra = 0;
+            int QuantitaScartiSinistra = 0;
 
 
-            while (true)
+            #region Lettura PLC
+            //comunicazione con plc e lettura variabile di scambio segnale
+            try
             {
-
-                //comunicazione con plc e lettura variabile di scambio segnale
-
-                try
+                lock (_comunicationLock)
                 {
-                    lock (_comunicationLock)
-                    {
-                        DoWeHaveAnyWaste_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteLeft);
-                        DoWeHaveAnyWaste_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteRight);
-                        QuantitaScartiDestra = (int)_plc.ReadVariable(Classes.PlcVariableName.QuantitaScartiDestra);
-                        QuantitaScartiSinistra = (int)_plc.ReadVariable(Classes.PlcVariableName.QuantitaScartiSinistra);
-                    }
-                    if (DoWeHaveAnyWaste_Left.Value || DoWeHaveAnyWaste_Right.Value)
-                    {
-                        if (DoWeHaveAnyWaste_Left.Value)
-                        {
-                            for (int i = 0; i < QuantitaScartiSinistra; i++)
-                            {
-                                int id;
-                                lock (_comunicationLock)
-                                {
-                                    id = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.ContatoreLavorazioneSinistra));
-                                }
-                                // riporto il valore del plc a false, in modo da riabilitare il comando
-                                string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Sinistra, id);
-                                if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
-                                else
-                                {
-                                    ConsoleWriteOnEventError(mex);
-                                    _log.WriteLog(mex);
-                                }
-
-                            }
-                            _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWasteLeft, false);
-                        }
-                        else
-                        {
-                            int id = Convert.ToInt32(_plc.ReadVariable(Classes.PlcVariableName.ContatoreLavorazioneDestra));
-                            for (int i = 0; i < QuantitaScartiDestra; i++)
-                            {
-                                // riporto il valore del plc a false, in modo da riabilitare il comando
-                                string mex = Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Destra, id);
-                                if (!mex.Contains("Error")) ConsoleWriteOnEventSuccess(mex);
-                                else ConsoleWriteOnEventError(mex);
-                            }
-                            _plc.WriteVariable(Classes.PlcVariableName.LastOneIsWasteRight, false);
-                        }
-
-                        //Aggiornamento report su PLC
-                        UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
-                        UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
-                        UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
-
-                        if (!_CheckForWasteStatus.HasValue || !_CheckForWasteStatus.Value)
-                        {
-                            _CheckForWasteStatus = true;
-                            ConsoleWriteOnEventSuccess("Waste eseguito, ricalcolo pezzi prodotti riuscito");
-                        }
-                    }
+                    DoWeHaveAnyWaste_Left = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteLeft);
+                    DoWeHaveAnyWaste_Right = (bool)_plc.ReadVariable(Classes.PlcVariableName.LastOneIsWasteRight);
+                    QuantitaScartiDestra = (int)_plc.ReadVariable(Classes.PlcVariableName.QuantitaScartiDestra);
+                    QuantitaScartiSinistra = (int)_plc.ReadVariable(Classes.PlcVariableName.QuantitaScartiSinistra);
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                ConsoleWriteOnEventError("Check for waste Error on plc tags reading: " + ex.Message);
+                _log.WriteLog("Check for waste Error on plc tags reading: " + ex.Message);
+                return false;
+            }
+            #endregion
+
+            //se non è segnalato nessuno scarto return false, per indicare niente è avvenuto
+            if (!DoWeHaveAnyWaste_Left && !DoWeHaveAnyWaste_Right) return false;
+            //se invece è presente uno scarto
+
+
+            else
+            {
+                //Lavorazione scartata da stazione sinistra
+                if (DoWeHaveAnyWaste_Left)
                 {
-                    if (!_CheckForWasteStatus.HasValue || _CheckForWasteStatus.Value)
+                    #region Restore PLC Waste Bool
+                    try
                     {
-                        _CheckForWasteStatus = false;
-                        ConsoleWriteOnEventError("Check for waste Error: " + ex.Message);
+                        _plc.WriteVariable(PlcVariableName.LastOneIsWasteLeft, false);
                     }
+                    catch (Exception ex)
+                    {
+                        string mex = $"Check for waste - Error on reset tag {PlcVariableName.LastOneIsWasteLeft}, " + ex.Message;
+                        ConsoleWriteOnEventError(mex);
+                        _log.WriteLog(mex);
+                        return false;
+                    }
+                    #endregion
 
+                    #region Gestione scarto inferiore a 1
+                    //se è stato premuto lo scarto ma il valore da scartare è minore di 1
+                    if (QuantitaScartiSinistra < 1)
+                    {
+                        string mex = "Can not target waste when the number of wasted item on Left is less than 1";
+                        ConsoleWriteOnEventWarning(mex);
+                        _log.WriteLog(mex);
+                        return false;
+                    }
+                    #endregion
 
+                    #region Lettura Id lavorazione
+                    int id;
+                    try
+                    {
+                        lock (_comunicationLock)
+                        {
+                            id = Convert.ToInt32(_plc.ReadVariable(PlcVariableName.ContatoreLavorazioneSinistra));
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        string txt = $"CheckWaste : error on reading item id, tag {PlcVariableName.ContatoreLavorazioneSinistra}";
+                        ConsoleWriteOnEventWarning(txt);
+                        _log.WriteLog(txt);
+                        return false;
+                    }
+                    #endregion
+
+                    #region Forloop sub recepy
+                    for (int i = 0; i < QuantitaScartiSinistra; i++)
+                    {
+                        // Eseguo la funzione di sub recepy, e controllo lo stato del risultato
+                        switch (Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Sinistra, id))
+                        {
+                            case Database.SavingNewWaste.Errore:
+                                string m1 = $"Check for waste - Error on subrecepyNumber.";
+                                ConsoleWriteOnEventError(m1);
+                                _log.WriteLog(m1);
+                                return false;
+                            case Database.SavingNewWaste.LogNonTrovato:
+                                string m2 = $"Check for waste - Error on subrecepyNumber.Log not found ";
+                                ConsoleWriteOnEventError(m2);
+                                _log.WriteLog(m2);
+                                return false;
+                            case Database.SavingNewWaste.SoloLogAggiornato:
+                                string m3 = $"Check for waste - Aggiornato solo il log, ricetta non trovata";
+                                ConsoleWriteOnEventWarning(m3);
+                                _log.WriteLog(m3);
+                                break;
+                            case Database.SavingNewWaste.SalvatoEAggiorantaTabellaOrdini:
+                                string m4 = $"Check for waste - Aggiornamento log e ricetta avventuo correttamente";
+                                ConsoleWriteOnEventSuccess(m4);
+                                _log.WriteLog(m4);
+                                break;
+                        }
+                    }
+                    #endregion
+
+                    return true;
                 }
 
-                Thread.Sleep(2000);
+                //Lavorazione scartata da stazione destra
+                else
+                {
+                    #region Restore PLC Waste Bool
+                    try
+                    {
+                        _plc.WriteVariable(PlcVariableName.LastOneIsWasteRight, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        string mex = $"Check for waste - Error on reset tag {PlcVariableName.LastOneIsWasteRight}, " + ex.Message;
+                        ConsoleWriteOnEventError(mex);
+                        _log.WriteLog(mex);
+                        return false;
+                    }
+                    #endregion
+
+                    #region Gestione scarto inferiore a 1
+                    //se è stato premuto lo scarto ma il valore da scartare è minore di 1
+                    if (QuantitaScartiDestra < 1)
+                    {
+                        string mex = "Can not target waste when the number of wasted item on Right id less than 1";
+                        ConsoleWriteOnEventWarning(mex);
+                        _log.WriteLog(mex);
+                        return false;
+                    }
+                    #endregion
+
+                    #region Lettura Id lavorazione
+                    int id;
+                    try
+                    {
+                        lock (_comunicationLock)
+                        {
+                            id = Convert.ToInt32(_plc.ReadVariable(PlcVariableName.ContatoreLavorazioneDestra));
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        string txt = $"CheckWaste : error on reading item id, tag {PlcVariableName.ContatoreLavorazioneDestra}";
+                        ConsoleWriteOnEventWarning(txt);
+                        _log.WriteLog(txt);
+                        return false;
+                    }
+                    #endregion
+
+                    #region Forloop sub recepy
+                    for (int i = 0; i < QuantitaScartiDestra; i++)
+                    {
+                        // Eseguo la funzione di sub recepy, e controllo lo stato del risultato
+                        switch (Database.SubRecepyNumber(PlcVariableName.StazioneSaldatrice.Destra, id))
+                        {
+                            case Database.SavingNewWaste.Errore:
+                                string m1 = $"Check for waste - Error on subrecepyNumber.";
+                                ConsoleWriteOnEventError(m1);
+                                _log.WriteLog(m1);
+                                return false;
+                            case Database.SavingNewWaste.LogNonTrovato:
+                                string m2 = $"Check for waste - Error on subrecepyNumber.Log not found ";
+                                ConsoleWriteOnEventError(m2);
+                                _log.WriteLog(m2);
+                                return false;
+                            case Database.SavingNewWaste.SoloLogAggiornato:
+                                string m3 = $"Check for waste - Aggiornato solo il log, ricetta non trovata";
+                                ConsoleWriteOnEventWarning(m3);
+                                _log.WriteLog(m3);
+                                break;
+                            case Database.SavingNewWaste.SalvatoEAggiorantaTabellaOrdini:
+                                string m4 = $"Check for waste - Aggiornamento log e ricetta avventuo correttamente";
+                                ConsoleWriteOnEventSuccess(m4);
+                                _log.WriteLog(m4);
+                                break;
+                        }
+                    }
+                    #endregion
+
+                    return true;
+                }
+
             }
         }
+
+
+
+        /// <summary>
+        /// La funzione CheckRecepyChange scrive le ricette lette dal database, sul PLC
+        /// </summary>
+        public void CheckRecepyChange()
+        {
+
+            lock (_comunicationLock)
+            {
+                //lettura ricette da database
+                bool ricetteUguali = true;
+                List<Classes.production2plc> listaProduzione = Classes.Database.ReadRecepies();
+                if (listaProduzione == null || listaProduzione.Count < 1)
+                {
+                    string mex = "The production list, retrived from the database, is null or contain less than 1 items";
+                    ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+
+                }
+                else
+                {
+                    if (listaProduzione.Count != _ultimaListaProduzione.Count)
+                    {
+                        _ultimaListaProduzione = new List<production2plc>(listaProduzione.Count);
+                        ricetteUguali = false;
+                    }
+                }
+
+                //Se la lista ha lo stesso numero di elementi, controllo se sono
+                //uguali
+                if (ricetteUguali)
+                {
+                    try
+                    {
+                        for (int i = 0; i < listaProduzione.Count; i++)
+                        {
+                            if (!listaProduzione[i].IsEqualTo(_ultimaListaProduzione[i]))
+                            {
+                                ricetteUguali = false;
+                                break;
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        string mex = "Error on Verifying if the recepies are equals to the old ones - " + ex.Message;
+                        ConsoleWriteOnEventError(mex);
+                        _log.WriteLog(mex);
+                        //In caso di erroe di questo tipo, procedo alla riscrittura delle nuove ricette.
+                        ricetteUguali = false;
+                    }
+                }
+
+                //se le ricette contengono delle differenze, avviene l'aggiornamento
+                if (!ricetteUguali)
+                {
+
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+
+                    try
+                    {
+                        if (!_plc.Active) _plc.Active = true;
+                        for (int i = 0; i < listaProduzione.Count; i++)
+                        {
+                            if (listaProduzione[i].Lotto != null)
+                            {
+                                _plc.WriteVariable(Classes.PlcVariableName.NumeroPezzi[i], (Int16)listaProduzione[i].NumeroPezziTotali);
+                                _plc.WriteVariable(Classes.PlcVariableName.NumeroPezziAttuale[i], (Int16)listaProduzione[i].NumeroParziale);
+                                _plc.WriteVariable(Classes.PlcVariableName.Lotti[i], listaProduzione[i].Lotto);
+                                _plc.WriteVariable(Classes.PlcVariableName.CodiceArticoli[i], listaProduzione[i].CodiceArticolo);
+                            }
+
+                        }
+                        watch.Stop();
+                        //Aggiorno le ultime ricette con quelle correnti per il prossimo check
+                        _ultimaListaProduzione = listaProduzione;
+                        ConsoleWriteOnEventSuccess("Scrittura ricette aggiornate avvenuta in : " + watch.ElapsedMilliseconds + " ms");
+                    }
+                    catch (Exception ex)
+                    {
+                        watch.Stop();
+                        string mex = "Screeba Error [Srcittura ricette su PLC] : " + ex.Message;
+                        ConsoleWriteOnEventError(mex);
+                        _log.WriteLog(mex);
+                    }
+                }
+            }
+
+        }
+
 
         public void UpdateRportGiorni1(string stringaId)
         {
@@ -723,7 +936,6 @@ namespace Runner.Classes
 
         }
 
-        #endregion
 
         #region async Launcher
         public void AsyncHeartBeat()
@@ -732,28 +944,6 @@ namespace Runner.Classes
             Thread asyncBeater = new Thread(HeartBeat);
             asyncBeater.IsBackground = true;
             asyncBeater.Start();
-
-        }
-        public void AsyncCheckForWaste()
-        {
-            Thread wasteCollector = new Thread(CheckForWaste);
-            wasteCollector.IsBackground = true;
-            wasteCollector.Start();
-        }
-        public void AsyncCheckEndOfTheGame()
-        {
-
-            Thread asyncEndOfTheGame = new Thread(CheckEndOfTheGame);
-            asyncEndOfTheGame.IsBackground = true;
-            asyncEndOfTheGame.Start();
-
-        }
-        public void AsyncScreebaLoop()
-        {
-
-            Thread debugLoop = new Thread(Screeba);
-            debugLoop.IsBackground = true;
-            debugLoop.Start();
 
         }
         #endregion

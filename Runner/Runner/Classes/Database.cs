@@ -9,7 +9,21 @@ namespace Runner.Classes
     public static class Database
     {
         public static object locker = new object();
-        static Luca.Logger log = new Luca.Logger(@"\GiDi_Runner\Database\");
+        static Luca.Logger _log = new Luca.Logger(@"\GiDi_Runner\Database\");
+        public enum SavingNewLogResult
+        {
+            Errore,
+            SalvatoSoloLog,
+            SalvatoEAggiorantaTabellaOrdini
+        }
+
+        public enum SavingNewWaste
+        {
+            Errore,
+            LogNonTrovato,
+            SoloLogAggiornato,
+            SalvatoEAggiorantaTabellaOrdini
+        }
 
         public struct ResocontoOrdine
         {
@@ -33,7 +47,7 @@ namespace Runner.Classes
             }
         }
 
-        public static void WriteLog(Classes.productionLog dataToLog)
+        public static SavingNewLogResult WriteLog(Classes.productionLog dataToLog)
         {
             try
             {
@@ -41,13 +55,25 @@ namespace Runner.Classes
                 {
                     contex.productionLogs.Add(dataToLog);
                     contex.SaveChanges();
+
+                    //se non esiste nessuna ricetta con questo lotto registrata, la lavorazione è stata 
+                    //effettuata con una delle due lavorazioni jolly del HMI.
+                    //Non viene quindi aggiornata la tabella ordini
+                    if (!contex.production2plc.Any(l => l.Lotto == dataToLog.Lotto))
+                    {
+                        PLCWorker.ConsoleWriteOnEventWarning("Can not update recepy global production, recepy doesent exists.");
+                        return SavingNewLogResult.SalvatoSoloLog;
+                    }
+
                 }
-                AddRecepyNumber(dataToLog.Lotto);
+                if (AddRecepyNumber(dataToLog.Lotto)) return SavingNewLogResult.SalvatoEAggiorantaTabellaOrdini;
+                else return SavingNewLogResult.SalvatoSoloLog;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-                log.WriteLog("Error Writing log for new Production. Insert row on Production error : "+ex);
+                _log.WriteLog("Error Writing log for new Production. Insert row on Production error : " + ex);
+                return SavingNewLogResult.Errore;
             }
         }
 
@@ -169,72 +195,110 @@ namespace Runner.Classes
                 return null;
             }
         }
-        private static void AddRecepyNumber(string nomeLotto)
+        private static bool AddRecepyNumber(string nomeLotto)
         {
             try
             {
                 using (var contex = new Classes.ProduzioneEntities())
                 {
                     Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == nomeLotto).FirstOrDefault();
-                    if (ricetta == null) throw new Exception("La ricetta Lavorata non è salvata nel Database. Impossibile Aggiornare la produzione.");
                     ricetta.NumeroParziale++;
                     contex.SaveChanges();
+                    return true;
                 }
             }
             catch (Exception ex)
             {
-                PLCWorker.ConsoleWriteOnEventError("Error on adding 1 to a recepy - "+ex);
-                log.WriteLog("Error on adding 1 to a recepy - " + ex);
+                PLCWorker.ConsoleWriteOnEventError("Error on adding 1 to a recepy - " + ex);
+                _log.WriteLog("Error on adding 1 to a recepy - " + ex);
+                return false;
             }
         }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="stazioneSaldatrice"></param>
-        /// <returns>Stringa per console</returns>
-        public static string SubRecepyNumber(PlcVariableName.StazioneSaldatrice stazioneSaldatrice, int idLavorazione)
+        public static SavingNewWaste SubRecepyNumber(PlcVariableName.StazioneSaldatrice stazioneSaldatrice, int idLavorazione)
         {
-            string message = "";
+            productionLog log = new productionLog();
 
-            try
+            using (var contex = new Classes.ProduzioneEntities())
             {
-                using (var contex = new Classes.ProduzioneEntities())
-                {
 
+                #region Get Log from db
+                try
+                {
                     // Assegno ad un nuovo log, il valore dell'ultimo record inserito, non marcato come scarto, che è 
                     // stato lavorato nella stazione passata come parametro
-                    Classes.productionLog log = contex.productionLogs.OrderByDescending(i => i.id)
-                        .Where(l => l.Stazione == (int)stazioneSaldatrice && l.Waste == false && l.IdLavorazione == idLavorazione).FirstOrDefault();
-                    // assegno il valore di scarto
-                    if (log == null) throw new Exception("No Log was founded to apply waste check.");
-                    log.Waste = true;
-                    contex.SaveChanges();
-
-                    Classes.production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
-                    if (ricetta == null) throw new Exception("No recepy was founded for sub a waste.");
-                    else
-                    {
-                        if (ricetta.NumeroParziale > 0)
-                        {
-                            ricetta.NumeroParziale--;
-                        }
-                    }
-                    contex.SaveChanges();
-                    string stazione;
-                    if ((int)log.Stazione == 1) stazione = "Sinistra";
-                    else stazione = "Destra";
-                    message += $"Scartata la lavorazione con Lotto {log.Lotto}, Codice Articolo {log.CodiceArticolo}, lavorata dalla stazione {stazione},\n";
-                    message += $"Alle ore {log.OraLog}, Turno {log.Turno}";
-                    return message;
+                    log = contex.productionLogs.OrderByDescending(i => i.id)
+                        .Where(l => l.Stazione == (int)stazioneSaldatrice && l.Waste == false &&
+                        l.IdLavorazione == idLavorazione).FirstOrDefault();
                 }
-            }
-            catch (Exception ex)
-            {
-                PLCWorker.ConsoleWriteOnEventError("Error - SubRecepyNumber " + ex.Message);
-                log.WriteLog("Error - SubRecepyNumber " + ex.Message);
-                return null;
-            }
+                catch (Exception ex)
+                {
+                    string mex = $"SubRecepyNumber, error on finding requested log with Id {idLavorazione} : " + ex.Message;
+                    PLCWorker.ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+                    return SavingNewWaste.Errore;
+                }
+                #endregion
 
+                // assegno il valore di scarto
+                if (log == null) return SavingNewWaste.LogNonTrovato;
+                log.Waste = true;
+                #region Salvataggio Log con flag di waste
+                try
+                {
+                    contex.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    string mex = $"SubRecepyNumber, Errore salvataggio log con flag di waste " + ex.Message;
+                    PLCWorker.ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+                    return SavingNewWaste.Errore;
+                }
+                #endregion
+
+
+                production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
+                if (ricetta == null)
+                {
+                    string mex = $"Impossibile Aggiornare la ricetta con lotto {ricetta.Lotto}. Lotto non trovata." +
+                        "Solo il log è stato modificato";
+                    PLCWorker.ConsoleWriteOnEventWarning(mex);
+                    _log.WriteLog(mex);
+                    return SavingNewWaste.SoloLogAggiornato;
+                }
+                else
+                {
+                    if (ricetta.NumeroParziale > 0)
+                    {
+                        ricetta.NumeroParziale--;
+                    }
+                }
+                #region Salvataggio Ricetta con numero diminuito di uno
+                try
+                {
+                    contex.SaveChanges();
+                }
+                catch (Exception ex)
+                {
+                    string mex = $"SubRecepyNumber, Errore salvataggio ricetta con numero diminutio di 1 " + ex.Message;
+                    PLCWorker.ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+                    return SavingNewWaste.SoloLogAggiornato;
+                }
+                #endregion
+
+                string stazione;
+                if ((int)log.Stazione == 1) stazione = "Sinistra";
+                else stazione = "Destra";
+
+                string message = $"Scartata la lavorazione con Lotto {log.Lotto}, Codice Articolo {log.CodiceArticolo}, lavorata dalla stazione {stazione},\n";
+                message += $"Alle ore {log.OraLog}, Turno {log.Turno}";
+                PLCWorker.ConsoleWriteOnEventSuccess(message);
+                _log.WriteLog(message);
+                return SavingNewWaste.SalvatoEAggiorantaTabellaOrdini;
+            }
         }
+
     }
 }
+

@@ -1,13 +1,8 @@
 ﻿using Runner.Classes;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Runner
 {
@@ -15,6 +10,8 @@ namespace Runner
     {
 
         #region Object Declaration
+        //In questa classe il log viene utillizzato nel main e per notificare
+        //la chiusura del programma
         static Luca.Logger _log = new Luca.Logger(@"\GiDi_Runner\Main\");
         #endregion
 
@@ -54,57 +51,57 @@ namespace Runner
         }
         #endregion
 
-        static void Main(string[] args)
+        static void Main()
         {
-            #region Application Exit Handler
-            _handler += new EventHandler(Handler);
-            SetConsoleCtrlHandler(_handler, true);
-            #endregion
-
-            #region Console Title
-            Console.Title = $"Runner V[{Assembly.GetExecutingAssembly().GetName().Version}]";
-            Console.WriteLine("-- Inizio Programma Runner--\n");
-            #endregion
-
-            #region DatabaseCheck
-            try
-            {
-                using (var dbContext = new Classes.ProduzioneEntities())
-                {
-                    if (dbContext.Database.Exists())
-                    {
-                        Console.WriteLine("Connessione db OK");
-                    }
-                    else
-                    {
-                        string message = "Connessione db Non presente.\n";
-                        message += "Please build the database for the application from the Microsoft SQL Server Managment\n" +
-                           "or check where the SQL Server Service is ON.";
-                        Console.WriteLine(message);
-                        _log.WriteLog(message);
-                        Console.ReadLine();
-                        Environment.Exit(0);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                string message = "Error while checking for DB Presence : " + ex.Message;
-                Console.WriteLine(message);
-                _log.WriteLog(message);
-            }
-            #endregion
-
-            #region PLC Instance
-            //The constructor will launch all the separate threads
-            PLCWorker plc = new PLCWorker();
-            #endregion
-
-            while (true)
-            {
-                Thread.Sleep(2000);
-            }
+            PLCWorker p = new PLCWorker(true);
+            Console.Read();
         }
+
+        //static void Main(string[] args)
+        //{
+        //    #region Application Exit Handler
+        //    _handler += new EventHandler(Handler);
+        //    SetConsoleCtrlHandler(_handler, true);
+        //    #endregion
+
+        //    #region Console Title
+        //    Console.Title = $"Runner V[{Assembly.GetExecutingAssembly().GetName().Version}]";
+        //    Console.WriteLine("-- Inizio Programma Runner--\n");
+        //    #endregion
+
+        //    #region DatabaseCheck
+        //    try
+        //    {
+        //        using (var dbContext = new Classes.ProduzioneEntities())
+        //        {
+        //            if (dbContext.Database.Exists())
+        //            {
+        //                Console.WriteLine("Connessione db OK");
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        string message = "Connessione db Non presente.\n";
+        //        message += "Please build the database for the application from the Microsoft SQL Server Managment\n" +
+        //           "or check where the SQL Server Service is ON.\n" + ex.Message;
+        //        Console.WriteLine(message);
+        //        _log.WriteLog(message);
+        //        Console.ReadLine();
+        //        Environment.Exit(0);
+        //    }
+        //    #endregion
+
+        //    #region PLC Instance
+        //    //The constructor will launch all the separate threads
+        //    PLCWorker plc = new PLCWorker();
+        //    #endregion
+
+        //    while (true)
+        //    {
+        //        Thread.Sleep(2000);
+        //    }
+        //}
 
     }
 }
