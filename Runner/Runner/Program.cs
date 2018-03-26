@@ -51,57 +51,51 @@ namespace Runner
         }
         #endregion
 
-        static void Main()
+        static void Main(string[] args)
         {
-            PLCWorker p = new PLCWorker(true);
-            Console.Read();
+            #region Application Exit Handler
+            _handler += new EventHandler(Handler);
+            SetConsoleCtrlHandler(_handler, true);
+            #endregion
+
+            #region Console Title
+            Console.Title = $"Runner V[{Assembly.GetExecutingAssembly().GetName().Version}]";
+            Console.WriteLine("-- Inizio Programma Runner--\n");
+            #endregion
+
+            #region DatabaseCheck
+            try
+            {
+                using (var dbContext = new Classes.ProduzioneEntities())
+                {
+                    if (dbContext.Database.Exists())
+                    {
+                        Console.WriteLine("Connessione db OK");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                string message = "Connessione db Non presente.\n";
+                message += "Please build the database for the application from the Microsoft SQL Server Managment\n" +
+                   "or check where the SQL Server Service is ON.\n" + ex.Message;
+                Console.WriteLine(message);
+                _log.WriteLog(message);
+                Console.ReadLine();
+                Environment.Exit(0);
+            }
+            #endregion
+
+            #region PLC Instance
+            //The constructor will launch all the separate threads
+            PLCWorker plc = new PLCWorker();
+            #endregion
+
+            while (true)
+            {
+                Thread.Sleep(2000);
+            }
         }
-
-        //static void Main(string[] args)
-        //{
-        //    #region Application Exit Handler
-        //    _handler += new EventHandler(Handler);
-        //    SetConsoleCtrlHandler(_handler, true);
-        //    #endregion
-
-        //    #region Console Title
-        //    Console.Title = $"Runner V[{Assembly.GetExecutingAssembly().GetName().Version}]";
-        //    Console.WriteLine("-- Inizio Programma Runner--\n");
-        //    #endregion
-
-        //    #region DatabaseCheck
-        //    try
-        //    {
-        //        using (var dbContext = new Classes.ProduzioneEntities())
-        //        {
-        //            if (dbContext.Database.Exists())
-        //            {
-        //                Console.WriteLine("Connessione db OK");
-        //            }
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        string message = "Connessione db Non presente.\n";
-        //        message += "Please build the database for the application from the Microsoft SQL Server Managment\n" +
-        //           "or check where the SQL Server Service is ON.\n" + ex.Message;
-        //        Console.WriteLine(message);
-        //        _log.WriteLog(message);
-        //        Console.ReadLine();
-        //        Environment.Exit(0);
-        //    }
-        //    #endregion
-
-        //    #region PLC Instance
-        //    //The constructor will launch all the separate threads
-        //    PLCWorker plc = new PLCWorker();
-        //    #endregion
-
-        //    while (true)
-        //    {
-        //        Thread.Sleep(2000);
-        //    }
-        //}
 
     }
 }

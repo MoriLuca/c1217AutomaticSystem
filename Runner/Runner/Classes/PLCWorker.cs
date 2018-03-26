@@ -24,20 +24,23 @@ namespace Runner.Classes
         private bool _heartBeatStatus;
         private bool _EndOfTheGameStatus;
         private bool? _CheckForWasteStatus;
-        private bool _statoConnessione = true;
+        //imposto il bit a false cosi la prima volta che apro il programma viene forzato a 
+        private bool _statoConnessione = false;
 
         // lista utilizzata per verificare la necessita di scrivere la lista aggioranta sul plc
         List<Classes.production2plc> _ultimaListaProduzione = new List<production2plc>();
 
         //PLC utilizzato per l'applicazione
-        private NXCompolet _plc = new NXCompolet();
+        //private NXCompolet _plc = new NXCompolet();
+        private NJCompolet _plc = new NJCompolet();
         #endregion
 
         #region costruttore
         public PLCWorker()
         {
             _comunicationLock = new object();
-            _plc.PeerAddress = "10.0.50.121";
+            _plc.PeerAddress = "192.168.250.1";
+            //_plc.PeerAddress = "10.0.50.121";
             _plc.LocalPort = 2;
 
             conf.SmtpServer = "smtp.gmail.com";
@@ -49,17 +52,17 @@ namespace Runner.Classes
                 _plc.Active = true;
 
             #region Aggiornamento Report Lavorazioni HMI
-            try
-            {
-                UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
-                UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
-                UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                _log.WriteLog("Errore aggiornameto lavorazioni : " + ex.Message);
-            }
+            //try
+            //{
+            //    UpdateRportGiorni1(Classes.PlcVariableName.ContatoreLavorazioneDestra);
+            //    UpdateRportGiorni2(Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+            //    UpdateRportTotale(Classes.PlcVariableName.ContatoreLavorazioneDestra, Classes.PlcVariableName.ContatoreLavorazioneSinistra);
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine(ex.Message);
+            //    _log.WriteLog("Errore aggiornameto lavorazioni : " + ex.Message);
+            //}
             #endregion
 
             #region Threads 
@@ -202,8 +205,8 @@ namespace Runner.Classes
                         UpdateRportTotale(PlcVariableName.ContatoreLavorazioneDestra, PlcVariableName.ContatoreLavorazioneSinistra);
                     }
                     //Verifico se ci sono aggiornamenti nelle ricette sul database
-#warning attivare recepy qui sotto    
-                    //CheckRecepyChange();
+                    #warning attivare recepy qui sotto    
+                    CheckRecepyChange();
 
                 }
 
@@ -577,8 +580,6 @@ namespace Runner.Classes
             }
         }
 
-
-
         /// <summary>
         /// La funzione CheckRecepyChange scrive le ricette lette dal database, sul PLC
         /// </summary>
@@ -667,7 +668,6 @@ namespace Runner.Classes
             }
 
         }
-
 
         public void UpdateRportGiorni1(string stringaId)
         {
