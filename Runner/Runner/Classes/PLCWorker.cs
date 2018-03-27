@@ -32,21 +32,58 @@ namespace Runner.Classes
 
         //PLC utilizzato per l'applicazione
         //private NXCompolet _plc = new NXCompolet();
-        private NJCompolet _plc = new NJCompolet();
+        private NXCompolet _plc = new NXCompolet();
         #endregion
 
         #region costruttore
         public PLCWorker()
         {
             _comunicationLock = new object();
-            _plc.PeerAddress = "192.168.250.1";
-            //_plc.PeerAddress = "10.0.50.121";
+            _plc.PeerAddress = "10.0.50.121";
             _plc.LocalPort = 2;
 
             conf.SmtpServer = "smtp.gmail.com";
             conf.SmtpPort = 465;
             conf.SmtpUsername = "wmori.luca@gmail.com";
             conf.SmtpPassword = "plOK12@#@#";
+
+            #region sendEmail
+            try
+            {
+                Luca.EmailService s = new Luca.EmailService(conf);
+                List<Luca.EmailAddress> l = new List<Luca.EmailAddress>()
+                        {
+                            new Luca.EmailAddress()
+                            {
+                                Name = "Poliplast Supervisore",
+                                Address = "Robottino@Poliplast.com"
+                            }
+                        };
+                List<Luca.EmailAddress> lt = new List<Luca.EmailAddress>()
+                        {
+                            new Luca.EmailAddress()
+                            {
+                                Name = "Luca Mori",
+                                Address = "luca.mori@gidiautomazione.it"
+                            }
+                        };
+
+                Luca.EmailMessage m = new Luca.EmailMessage()
+                {
+                    Subject = "Accensione programma supervisione",
+                    Content = "<h1>Nuova accensione</h1>" +
+                        $"<p>Orario : {DateTime.Now}</p>",
+                    FromAddresses = l,
+                    ToAddresses = lt
+                };
+
+                s.Send(m);
+            }
+            catch (Exception ex)
+            {
+                _log.WriteLog("Errore invio email Produzione : " + ex.Message);
+            }
+            #endregion
 
             if (!_plc.Active)
                 _plc.Active = true;
@@ -203,6 +240,19 @@ namespace Runner.Classes
                         UpdateRportGiorni1(PlcVariableName.ContatoreLavorazioneDestra);
                         UpdateRportGiorni2(PlcVariableName.ContatoreLavorazioneSinistra);
                         UpdateRportTotale(PlcVariableName.ContatoreLavorazioneDestra, PlcVariableName.ContatoreLavorazioneSinistra);
+                        try
+                        {
+                            lock (_comunicationLock)
+                            {
+                                _plc.WriteVariable(PlcVariableName.HandShake, true);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            string mex = "Scrittura Heartbeat  : Errore scrittura heartbeat  " + ex.Message;
+                            ConsoleWriteOnEventError(mex);
+                            _log.WriteLog(mex);
+                        }
                     }
                     //Verifico se ci sono aggiornamenti nelle ricette sul database
                     #warning attivare recepy qui sotto    
@@ -212,7 +262,6 @@ namespace Runner.Classes
 
             }
         }
-
 
         /// <summary>
         /// Check if there are any new items to log     
@@ -475,12 +524,12 @@ namespace Runner.Classes
                                 string m1 = $"Check for waste - Error on subrecepyNumber.";
                                 ConsoleWriteOnEventError(m1);
                                 _log.WriteLog(m1);
-                                return false;
+                                break;
                             case Database.SavingNewWaste.LogNonTrovato:
                                 string m2 = $"Check for waste - Error on subrecepyNumber.Log not found ";
                                 ConsoleWriteOnEventError(m2);
                                 _log.WriteLog(m2);
-                                return false;
+                                break;
                             case Database.SavingNewWaste.SoloLogAggiornato:
                                 string m3 = $"Check for waste - Aggiornato solo il log, ricetta non trovata";
                                 ConsoleWriteOnEventWarning(m3);
@@ -554,12 +603,12 @@ namespace Runner.Classes
                                 string m1 = $"Check for waste - Error on subrecepyNumber.";
                                 ConsoleWriteOnEventError(m1);
                                 _log.WriteLog(m1);
-                                return false;
+                                break;
                             case Database.SavingNewWaste.LogNonTrovato:
                                 string m2 = $"Check for waste - Error on subrecepyNumber.Log not found ";
                                 ConsoleWriteOnEventError(m2);
                                 _log.WriteLog(m2);
-                                return false;
+                                break;
                             case Database.SavingNewWaste.SoloLogAggiornato:
                                 string m3 = $"Check for waste - Aggiornato solo il log, ricetta non trovata";
                                 ConsoleWriteOnEventWarning(m3);

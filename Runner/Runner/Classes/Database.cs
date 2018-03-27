@@ -260,7 +260,7 @@ namespace Runner.Classes
                 production2plc ricetta = contex.production2plc.Where(l => l.Lotto == log.Lotto).FirstOrDefault();
                 if (ricetta == null)
                 {
-                    string mex = $"Impossibile Aggiornare la ricetta con lotto {ricetta.Lotto}. Lotto non trovata." +
+                    string mex = $"Impossibile Aggiornare la ricetta con lotto {log.Lotto}. Lotto non trovata." +
                         "Solo il log è stato modificato";
                     PLCWorker.ConsoleWriteOnEventWarning(mex);
                     _log.WriteLog(mex);

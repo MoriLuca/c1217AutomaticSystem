@@ -55,11 +55,13 @@
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
-    <Reference Include="Luca_Email">
-      <HintPath>..\..\..\Luca\Utility\Email\bin\Release\netstandard2.0\Luca_Email.dll</HintPath>
+    <Reference Include="Luca_Email, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\Luca\Utility\Email\bin\Release\netstandard2.0\Luca_Email.dll</HintPath>
     </Reference>
-    <Reference Include="Luca_SystemLogger">
-      <HintPath>..\..\..\Luca\Utility\Logger\bin\Release\netstandard2.0\Luca_SystemLogger.dll</HintPath>
+    <Reference Include="Luca_SystemLogger, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\Luca\Utility\Logger\bin\Release\netstandard2.0\Luca_SystemLogger.dll</HintPath>
     </Reference>
     <Reference Include="MailKit, Version=2.0.0.0, Culture=neutral, PublicKeyToken=4e064fe7c44a8f1b, processorArchitecture=MSIL">
       <HintPath>..\packages\MailKit.2.0.2\lib\net45\MailKit.dll</HintPath>
@@ -155,6 +157,9 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
