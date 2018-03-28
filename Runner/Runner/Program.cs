@@ -86,6 +86,8 @@ namespace Runner
             }
             #endregion
 
+            Console.WriteLine("Creazione Istanza PLC, Connessione in corso ...");
+
             #region PLC Instance
             //The constructor will launch all the separate threads
             PLCWorker plc = new PLCWorker();

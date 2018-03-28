@@ -196,6 +196,22 @@ namespace Runner.Classes
                 //Se il PLC ha riportato lo stato a false
                 else
                 {
+                    try
+                    {
+                        lock (_comunicationLock)
+                        {
+                            _plc.WriteVariable(PlcVariableName.NuovaOra, (ushort)DateTime.Now.Hour);
+                            _plc.WriteVariable(PlcVariableName.NuovoMinuto, (ushort)DateTime.Now.Minute);
+                            _plc.WriteVariable(PlcVariableName.NuoviSecondi, (ushort)DateTime.Now.Second);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        string mex = "Riconnessione a PLC : Errore Aggiornamento ORE " + ex.Message;
+                        ConsoleWriteOnEventError(mex);
+                        _log.WriteLog(mex);
+                    }
+
                     #region Verifica Stato Connessione
                     //Se lo stato della connessione era impostato su false, vuol dire che la connessione
                     //è stata appena ristabilita
@@ -209,9 +225,6 @@ namespace Runner.Classes
                         {
                             lock (_comunicationLock)
                             {
-                                _plc.WriteVariable(PlcVariableName.NuovaOra, (ushort)DateTime.Now.Hour);
-                                _plc.WriteVariable(PlcVariableName.NuovoMinuto, (ushort)DateTime.Now.Minute);
-                                _plc.WriteVariable(PlcVariableName.NuoviSecondi, (ushort)DateTime.Now.Second);
                                 _plc.WriteVariable(PlcVariableName.HandShake, true);
                             }
                             //report connessione ristabilita
@@ -230,8 +243,20 @@ namespace Runner.Classes
                     }
                     #endregion
 
-                    //HeartBeat letto, di seguito il resto delle azioni da compiere
-                    //quando la comunicazione è ok
+                    //Handshake con PLC
+                    try
+                    {
+                        lock (_comunicationLock)
+                        {
+                            _plc.WriteVariable(PlcVariableName.HandShake, true);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        string mex = "Scrittura Heartbeat  : Errore scrittura heartbeat  " + ex.Message;
+                        ConsoleWriteOnEventError(mex);
+                        _log.WriteLog(mex);
+                    }
 
                     //Controllo se ci sono pezzi completati oppure se ci sono scarti da aggiornare
                     if (CheckEndOfTheGame() || CheckForWaste())
@@ -240,22 +265,13 @@ namespace Runner.Classes
                         UpdateRportGiorni1(PlcVariableName.ContatoreLavorazioneDestra);
                         UpdateRportGiorni2(PlcVariableName.ContatoreLavorazioneSinistra);
                         UpdateRportTotale(PlcVariableName.ContatoreLavorazioneDestra, PlcVariableName.ContatoreLavorazioneSinistra);
-                        try
-                        {
-                            lock (_comunicationLock)
-                            {
-                                _plc.WriteVariable(PlcVariableName.HandShake, true);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            string mex = "Scrittura Heartbeat  : Errore scrittura heartbeat  " + ex.Message;
-                            ConsoleWriteOnEventError(mex);
-                            _log.WriteLog(mex);
-                        }
+
                     }
+                    
+
+
                     //Verifico se ci sono aggiornamenti nelle ricette sul database
-                    #warning attivare recepy qui sotto    
+#warning attivare recepy qui sotto    
                     CheckRecepyChange();
 
                 }
