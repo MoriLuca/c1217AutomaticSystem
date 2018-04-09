@@ -95,7 +95,8 @@ namespace Runner
 
             while (true)
             {
-                Thread.Sleep(2000);
+                Thread.Sleep(5000);
+                plc.HeartBeat();
             }
         }
 

@@ -15,6 +15,7 @@ namespace Runner.Classes
         Luca.Logger _log = new Luca.Logger(@"\GiDi_Runner\PLCWorker\");
         static Luca.EmailConfiguration conf = new Luca.EmailConfiguration();
         static MimeKit.MimeMessage ma = new MimeKit.MimeMessage();
+        static bool SendTheEmail = false;
 
         #region proprietà
         private object _comunicationLock;
@@ -101,10 +102,6 @@ namespace Runner.Classes
             //    _log.WriteLog("Errore aggiornameto lavorazioni : " + ex.Message);
             //}
             #endregion
-
-            #region Threads 
-            AsyncHeartBeat();
-            #endregion
         }
         public PLCWorker(bool test)
         {
@@ -157,126 +154,121 @@ namespace Runner.Classes
         public void HeartBeat()
         {
 
-            while (true)
+            //comunicazione con plc e lettura variabile di scambio segnale
+
+            if (!_plc.Active) _plc.Active = true;
+
+            //Imposto il bit a true, cosi sono sicuro che per andare false la lettura
+            //è avvenuta ed è stato il PLC a riportarla a false
+            bool heartBIT = true;
+            #region Lettura Heartbeat
+            try
             {
-                // tempo arbitrario per test di connessione
-                Thread.Sleep(5000);
+                lock (_comunicationLock)
+                {
+                    heartBIT = (bool)_plc.ReadVariable(PlcVariableName.HandShake);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (_statoConnessione)
+                {
+                    string mex = $"Lost Connection. Error reading Handshake varaible {PlcVariableName.HandShake} :" + ex.Message;
+                    ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+                    _statoConnessione = false;
+                }
+                return;
+            }
+            #endregion
 
-                //comunicazione con plc e lettura variabile di scambio segnale
-
-                if (!_plc.Active) _plc.Active = true;
-
-                //Imposto il bit a true, cosi sono sicuro che per andare false la lettura
-                //è avvenuta ed è stato il PLC a riportarla a false
-                bool heartBIT = true;
-                #region Lettura Heartbeat
+            //Se la lettura dal plc è ancora di un bool true, il plc non ha ancora aggiornato il valore
+            //attendo e ripeto l'operazione
+            if (heartBIT) return;
+            //Se il PLC ha riportato lo stato a false
+            else
+            {
                 try
                 {
                     lock (_comunicationLock)
                     {
-                        heartBIT = (bool)_plc.ReadVariable(PlcVariableName.HandShake);
+                        _plc.WriteVariable(PlcVariableName.NuovaOra, (ushort)DateTime.Now.Hour);
+                        _plc.WriteVariable(PlcVariableName.NuovoMinuto, (ushort)DateTime.Now.Minute);
+                        _plc.WriteVariable(PlcVariableName.NuoviSecondi, (ushort)DateTime.Now.Second);
                     }
                 }
                 catch (Exception ex)
                 {
-                    if (_statoConnessione)
-                    {
-                        string mex = $"Lost Connection. Error reading Handshake varaible {PlcVariableName.HandShake} :" + ex.Message;
-                        ConsoleWriteOnEventError(mex);
-                        _log.WriteLog(mex);
-                        _statoConnessione = false;
-                    }
-                    continue;
+                    string mex = "Riconnessione a PLC : Errore Aggiornamento ORE " + ex.Message;
+                    ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
                 }
-                #endregion
 
-                //Se la lettura dal plc è ancora di un bool true, il plc non ha ancora aggiornato il valore
-                //attendo e ripeto l'operazione
-                if (heartBIT) continue;
-                //Se il PLC ha riportato lo stato a false
-                else
+                #region Verifica Stato Connessione
+                //Se lo stato della connessione era impostato su false, vuol dire che la connessione
+                //è stata appena ristabilita
+                if (!_statoConnessione)
                 {
-                    try
-                    {
-                        lock (_comunicationLock)
-                        {
-                            _plc.WriteVariable(PlcVariableName.NuovaOra, (ushort)DateTime.Now.Hour);
-                            _plc.WriteVariable(PlcVariableName.NuovoMinuto, (ushort)DateTime.Now.Minute);
-                            _plc.WriteVariable(PlcVariableName.NuoviSecondi, (ushort)DateTime.Now.Second);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        string mex = "Riconnessione a PLC : Errore Aggiornamento ORE " + ex.Message;
-                        ConsoleWriteOnEventError(mex);
-                        _log.WriteLog(mex);
-                    }
-
-                    #region Verifica Stato Connessione
-                    //Se lo stato della connessione era impostato su false, vuol dire che la connessione
-                    //è stata appena ristabilita
-                    if (!_statoConnessione)
-                    {
-                        //Aggiorno il valore per sapere il prossimo ciclo che la connessione era gia attiva
-                        _statoConnessione = true;
-                        //Aggiornamento ore su plc, solo sulla riattivazione della connessione
-                        //utilizzo lo stesso lock per impostare a true il bit di handshake
-                        try
-                        {
-                            lock (_comunicationLock)
-                            {
-                                _plc.WriteVariable(PlcVariableName.HandShake, true);
-                            }
-                            //report connessione ristabilita
-                            string mex = "Heartbeat: Stabilita Comunicazione con PLC OK! - PLC Address : " + _plc.PeerAddress;
-                            ConsoleWriteOnEventSuccess(mex);
-                            _log.WriteLog(mex);
-                        }
-                        catch (Exception ex)
-                        {
-                            string mex = "Riconnessione a PLC : Errore scrittura heartbeat/aggiornamento ore " + ex.Message;
-                            ConsoleWriteOnEventError(mex);
-                            _log.WriteLog(mex);
-                            if (_heartBeatStatus) _heartBeatStatus = false;
-                        }
-
-                    }
-                    #endregion
-
-                    //Handshake con PLC
+                    //Aggiorno il valore per sapere il prossimo ciclo che la connessione era gia attiva
+                    _statoConnessione = true;
+                    //Aggiornamento ore su plc, solo sulla riattivazione della connessione
+                    //utilizzo lo stesso lock per impostare a true il bit di handshake
                     try
                     {
                         lock (_comunicationLock)
                         {
                             _plc.WriteVariable(PlcVariableName.HandShake, true);
                         }
+                        //report connessione ristabilita
+                        string mex = "Heartbeat: Stabilita Comunicazione con PLC OK! - PLC Address : " + _plc.PeerAddress;
+                        ConsoleWriteOnEventSuccess(mex);
+                        _log.WriteLog(mex);
                     }
                     catch (Exception ex)
                     {
-                        string mex = "Scrittura Heartbeat  : Errore scrittura heartbeat  " + ex.Message;
+                        string mex = "Riconnessione a PLC : Errore scrittura heartbeat/aggiornamento ore " + ex.Message;
                         ConsoleWriteOnEventError(mex);
                         _log.WriteLog(mex);
+                        if (_heartBeatStatus) _heartBeatStatus = false;
                     }
 
-                    //Controllo se ci sono pezzi completati oppure se ci sono scarti da aggiornare
-                    if (CheckEndOfTheGame() || CheckForWaste())
+                }
+                #endregion
+
+                //Handshake con PLC
+                try
+                {
+                    lock (_comunicationLock)
                     {
-                        //Aggiornamento report su plc
-                        UpdateRportGiorni1(PlcVariableName.ContatoreLavorazioneDestra);
-                        UpdateRportGiorni2(PlcVariableName.ContatoreLavorazioneSinistra);
-                        UpdateRportTotale(PlcVariableName.ContatoreLavorazioneDestra, PlcVariableName.ContatoreLavorazioneSinistra);
-
+                        _plc.WriteVariable(PlcVariableName.HandShake, true);
                     }
-                    
+                }
+                catch (Exception ex)
+                {
+                    string mex = "Scrittura Heartbeat  : Errore scrittura heartbeat  " + ex.Message;
+                    ConsoleWriteOnEventError(mex);
+                    _log.WriteLog(mex);
+                }
 
-
-                    //Verifico se ci sono aggiornamenti nelle ricette sul database
-#warning attivare recepy qui sotto    
-                    CheckRecepyChange();
+                //Controllo se ci sono pezzi completati oppure se ci sono scarti da aggiornare
+                if (CheckEndOfTheGame() || CheckForWaste())
+                {
+                    //Aggiornamento report su plc
+                    UpdateRportGiorni1(PlcVariableName.ContatoreLavorazioneDestra);
+                    UpdateRportGiorni2(PlcVariableName.ContatoreLavorazioneSinistra);
+                    UpdateRportTotale(PlcVariableName.ContatoreLavorazioneDestra, PlcVariableName.ContatoreLavorazioneSinistra);
 
                 }
 
+
+
+                //Verifico se ci sono aggiornamenti nelle ricette sul database
+#warning attivare recepy qui sotto    
+                CheckRecepyChange();
+
             }
+
+
         }
 
         /// <summary>
@@ -398,10 +390,12 @@ namespace Runner.Classes
                 #endregion
 
                 #region sendEmail
-                try
+                if (SendTheEmail)
                 {
-                    Luca.EmailService s = new Luca.EmailService(conf);
-                    List<Luca.EmailAddress> l = new List<Luca.EmailAddress>()
+                    try
+                    {
+                        Luca.EmailService s = new Luca.EmailService(conf);
+                        List<Luca.EmailAddress> l = new List<Luca.EmailAddress>()
                         {
                             new Luca.EmailAddress()
                             {
@@ -409,7 +403,7 @@ namespace Runner.Classes
                                 Address = "Robottino@Poliplast.com"
                             }
                         };
-                    List<Luca.EmailAddress> lt = new List<Luca.EmailAddress>()
+                        List<Luca.EmailAddress> lt = new List<Luca.EmailAddress>()
                         {
                             new Luca.EmailAddress()
                             {
@@ -418,24 +412,24 @@ namespace Runner.Classes
                             }
                         };
 
-                    Luca.EmailMessage m = new Luca.EmailMessage()
+                        Luca.EmailMessage m = new Luca.EmailMessage()
+                        {
+                            Subject = "NuovoPezzoProdotto",
+                            Content = "<h1>Prodotto nuovo Pezzo</h1>" +
+                                $"<p>Orario : {p.OraLog}</p>" +
+                                $"<p>Stazione : {p.Stazione}</p>" +
+                                $"<p>TempoLavorazione : {p.TempoCiclo}</p>",
+                            FromAddresses = l,
+                            ToAddresses = lt
+                        };
+
+                        s.Send(m);
+                    }
+                    catch (Exception ex)
                     {
-                        Subject = "NuovoPezzoProdotto",
-                        Content = "<h1>Prodotto nuovo Pezzo</h1>" +
-                            $"<p>Orario : {p.OraLog}</p>" +
-                            $"<p>Stazione : {p.Stazione}</p>" +
-                            $"<p>TempoLavorazione : {p.TempoCiclo}</p>",
-                        FromAddresses = l,
-                        ToAddresses = lt
-                    };
-
-                    s.Send(m);
+                        _log.WriteLog("Errore invio email Produzione : " + ex.Message);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _log.WriteLog("Errore invio email Produzione : " + ex.Message);
-                }
-
                 #endregion
 
                 ConsoleWriteOnEventSuccess("Controllo Fine Pezzo eseguito correttamente");
@@ -1001,17 +995,6 @@ namespace Runner.Classes
 
         }
 
-
-        #region async Launcher
-        public void AsyncHeartBeat()
-        {
-
-            Thread asyncBeater = new Thread(HeartBeat);
-            asyncBeater.IsBackground = true;
-            asyncBeater.Start();
-
-        }
-        #endregion
 
     }
 }
